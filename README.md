@@ -7,7 +7,7 @@ Built for embodied AI research and real-world manipulation. Assemble at home in 
 ### What Makes It Different
 
 - **Motorized vertical lift** — 0–60 cm travel (floor-to-table reach)
-- **Purpose-engineered structure** — optimized for real-world tasks
+- **5-camera perception system** — top, front, back, and dual arm cameras engineered for embodied-AI reproducibility
 - **Completely open-source** — hardware and software freely available
 - **LeRobot-compatible** — works out of the box
 - **Clean, modern design** — built for both function and aesthetics
