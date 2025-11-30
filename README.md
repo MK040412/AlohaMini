@@ -1,5 +1,5 @@
 # AlohaMini
-[![Join our Discord](https://img.shields.io/badge/Discord-Join%20chat-blue)](https://discord.gg/muCssUMS) [![Follow on X](https://img.shields.io/twitter/follow/liyitengx?style=social)](https://x.com/liyitengx)
+[![Join our Discord](https://img.shields.io/badge/Discord-Join%20chat-blue)](https://discord.gg/CacMUBaFgJ) [![Follow on X](https://img.shields.io/twitter/follow/liyitengx?style=social)](https://x.com/liyitengx)
 
 
 AlohaMini is a dual-arm mobile robot with a motorized vertical lift — beautifully designed, fully 3D-printable, and affordable.  
