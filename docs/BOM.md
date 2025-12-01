@@ -88,7 +88,7 @@ If you prefer the base to operate as an **independent host system** (Wi‑Fi, un
 |------|---------------|-----|----------------|----------|----------------|----------|
 | Servo motor | Feetech / 12V 1/345 Gear(STS3215-C018) | 12 | $13.89 | [Alibaba](https://www.alibaba.com/product-detail/Feetech-STS3215-SO-ARM100-Servo-12V_1601292634404.html?spm=a2700.details.you_may_like.3.5ab1478e45kY42) | ¥110 | [taobao](https://item.taobao.com/item.htm?id=996544351583&spm=a213gs.v2success.0.0.73c04831naDrHP) |
 | Waveshare Bus Servo Controller | For connecting to the Raspberry Pi 5 | 2 | $13 | [Amazon](amazon.com/Waveshare-Integrates-Control-Circuit-Supports/dp/B0CTMM4LWK/) | ¥27 | [tmall](https://detail.tmall.com/item.htm?id=738817173460) |
-| USB camera | 720p focal length 3.8 mm, 36×36 mm form factor | 2 | — | Amazon | ¥103 | [taobao](https://item.taobao.com/item.htm?id=590682120464) |
+| USB camera | 720p focal length 3.8 mm, 32×32 mm form factor | 2 | — | Amazon | ¥103 | [taobao](https://item.taobao.com/item.htm?id=590682120464) |
 | 1-to-2 DC splitter cable | 30 cm, 5521 connector — for powering the arms | 1 | — | Amazon | ¥5 | [taobao](https://item.taobao.com/item.htm?id=594921965049) |
 | DC extension cable | 1.5 m, 5521 connector — for powering the arms | 2 | — | Amazon | ¥2.50 | [taobao](https://item.taobao.com/item.htm?id=43628177900) |
 | USB Type-C cable | For connecting to the Raspberry Pi 5 | 2 | $10 | [Amazon](https://www.amazon.com/Charging-etguuds-Charger-Braided-Compatible/dp/B0B8NWLLW2/?th=1) | ¥20 | [tmall](https://detail.tmall.com/item.htm?id=754024805047) |
