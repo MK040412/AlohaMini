@@ -11,19 +11,23 @@ from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
 
 # ============ Parameter Section ============ #
 parser = argparse.ArgumentParser()
-parser.add_argument("--use_dummy", action="store_true", help="Do not connect robot, only print actions")
+parser.add_argument("--no_robot", action="store_true", help="Do not connect robot, only print actions")
+parser.add_argument("--no_leader", action="store_true", help="Do not connect leader arm, only perform keyboard-controlled actions.")
 parser.add_argument("--fps", type=int, default=30, help="Main loop frequency (frames per second)")
 parser.add_argument("--remote_ip", type=str, default="127.0.0.1", help="LeKiwi host IP address")
 
 args = parser.parse_args()
 
-USE_DUMMY = args.use_dummy
+NO_ROBOT = args.no_robot
+NO_LEADER = args.no_leader
 FPS = args.fps
 # ========================================== #
 
-if USE_DUMMY:
-    print("🧪 USE_DUMMY mode enabled: robot will not connect, only print actions.")
+if NO_ROBOT:
+    print("🧪 NO_ROBOT mode enabled: robot will not connect, only print actions.")
 
+if NO_LEADER:
+    print("🧪 NO_LEADER mode enabled: leader arm will not connect, only print actions.")
 # Create configs
 robot_config = LeKiwiClientConfig(remote_ip=args.remote_ip, id="my_alohamini")
 bi_cfg = BiSO100LeaderConfig(
@@ -37,13 +41,19 @@ keyboard = KeyboardTeleop(keyboard_config)
 robot = LeKiwiClient(robot_config)
 
 # Connection logic
-if not USE_DUMMY:
+if not NO_ROBOT:
     robot.connect()
 else:
     print("🧪 robot.connect() skipped, only printing actions.")
 
-leader.connect()
+if not NO_LEADER:
+    leader.connect()
+else:
+    print("🧪 robot.connect() skipped, only printing actions.")
+
 keyboard.connect()
+
+
 
 init_rerun(session_name="lekiwi_teleop")
 
@@ -54,9 +64,8 @@ if not robot.is_connected or not leader.is_connected or not keyboard.is_connecte
 while True:
     t0 = time.perf_counter()
 
-    observation = robot.get_observation() if not USE_DUMMY else {}
-
-    arm_actions = leader.get_action()
+    observation = robot.get_observation() if not NO_ROBOT else {}
+    arm_actions = leader.get_action() if not NO_LEADER else {}
     arm_actions = {f"arm_{k}": v for k, v in arm_actions.items()}
     keyboard_keys = keyboard.get_action()
     base_action = robot._from_keyboard_to_base_action(keyboard_keys)
@@ -65,8 +74,8 @@ while True:
     action = {**arm_actions, **base_action, **lift_action}
     log_rerun_data(observation, action)
 
-    if USE_DUMMY:
-        print(f"[USE_DUMMY] action → {action}")
+    if NO_ROBOT:
+        print(f"[NO_ROBOT] action → {action}")
     else:
         robot.send_action(action)
         print(f"Sent action → {action}")

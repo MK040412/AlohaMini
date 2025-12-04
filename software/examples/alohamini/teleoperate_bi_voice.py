@@ -15,16 +15,16 @@ from voice_engine_gummy import SpeechEngineGummy, SpeechConfig
 from voice_exec import VoiceExecutor, ExecConfig
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--use_dummy", action="store_true", help="Do not connect robot, only print actions")
+parser.add_argument("--no_leader", action="store_true", help="Do not connect robot, only print actions")
 parser.add_argument("--fps", type=int, default=30, help="Main loop frequency (frames per second)")
 parser.add_argument("--remote_ip", type=str, default="127.0.0.1", help="Alohamini host IP address")
 args = parser.parse_args()
 
-USE_DUMMY = args.use_dummy
+NO_LEADER = args.no_leader
 FPS = args.fps
 
-if USE_DUMMY:
-    print("🧪 USE_DUMMY mode: no robot connection, printing actions only.")
+if NO_LEADER:
+    print("🧪 NO_LEADER mode: no robot connection, printing actions only.")
 
 # Create configs
 robot_config = LeKiwiClientConfig(remote_ip=args.remote_ip, id="my_alohamini")
@@ -58,7 +58,7 @@ speech = SpeechEngineGummy(SpeechConfig(
 execu = VoiceExecutor(ExecConfig(xy_speed_cmd=0.20, theta_speed_cmd=500.0, emit_text_cmd=True))
 
 # Connection logic
-if not USE_DUMMY:
+if not NO_LEADER:
     robot.connect()
 else:
     print("🧪 robot.connect() skipped.")
@@ -77,7 +77,7 @@ try:
     while True:
         t0 = time.perf_counter()
 
-        observation = robot.get_observation() if not USE_DUMMY else {}
+        observation = robot.get_observation() if not NO_LEADER else {}
         cur_h = float(observation.get("lift_axis.height_mm", 0.0)) if observation else 0.0
         execu.update_height_mm(cur_h)
 
@@ -97,8 +97,8 @@ try:
 
         
 
-        if USE_DUMMY:
-            print(f"[USE_DUMMY] action → {action}")
+        if NO_LEADER:
+            print(f"[NO_LEADER] action → {action}")
         else:
             robot.send_action(action)
 
