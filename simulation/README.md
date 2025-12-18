@@ -1,19 +1,8 @@
 # AlohaMini-Simulation
 
-![AlohaMini preview](https://raw.githubusercontent.com/lemon198/AlohaMini-Simulation/main/picture/P2.png)
+![AlohaMini preview](picture/P2.png)
 
-AlohaMini-Simulation bases on AlohaMini, which link is https://github.com/liyiteng/AlohaMini.
-
-It visualizes the AlohaMini robot using RViz in both ROS 1 and ROS 2, and includes optional Gazebo integration for simulation.
-
-This document provides separate, explicit instructions for ROS 2 and ROS 1: each section contains build (compile) and run (launch) steps targeted at typical Linux (Ubuntu) environments.
-
-## Repository
-
-```bash
-git clone https://github.com/lemon198/AlohaMini-Simulation.git
-cd AlohaMini-Simulation
-```
+This directory contains the simulation and visualization assets for **AlohaMini**. It provides dual-stack support for both **ROS 1** and **ROS 2**, enabling high-fidelity visualization in RViz and physics-based testing in Gazebo.
 
 ## ROS 2 — Build & Run (colcon)
 
@@ -30,7 +19,8 @@ sudo apt install -y python3-colcon-common-extensions python3-rosdep
 2) Build the workspace:
 
 ```bash
-colcon build   # run from repository root
+cd simulation
+colcon build
 ```
 
 3) Source the overlay before running:
@@ -64,7 +54,8 @@ These instructions target ROS 1 (catkin-based workspaces) such as Melodic or Noe
 ```bash
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/src
-git clone https://github.com/lemon198/AlohaMini-Simulation.git
+# assuming AlohaMini repository is already cloned
+ln -s /path/to/AlohaMini/simulation ~/catkin_ws/src/Aloha
 cd ~/catkin_ws
 ```
 
@@ -111,22 +102,7 @@ Notes for ROS 1:
 - For mixed ROS1/ROS2 systems, verify your ROS1-ROS2 bridge configuration and topic remapping.
 - If launches fail due to missing dependencies, run `rosdep install --from-paths src --ignore-src -r -y` in the workspace root.
 
-## Contributing
-
-Contributions are welcome. Please open issues or PRs against the upstream repository and follow its contribution guidelines.
-
-E-mail address：s-wyw25@bjzgca.edu.cn
 
 ## Acknowledgements
-Thanks to the open robotics community:
-
-AlohaMini · ALOHA · SO-ARM101 · LeRobot 
-
-## Future
-
-I'll keep exploring VLA algorithms on AlohaMini and will continuously updates. Your stars are what keep this project moving forward.
-
-## License
-
-See the `LICENSE` file in the repository for license details.
-
+This module was originally developed as a standalone repository,
+**lemon198/AlohaMini-Simulation**, and later integrated into the main **AlohaMini** project.
