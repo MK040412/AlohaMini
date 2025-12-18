@@ -9,8 +9,8 @@ Built for embodied AI research and real-world manipulation. Assemble at home in 
 
 ## Updates
 
+- [2025-12-18] — URDF and simulation assets are now available for visualization and simulation (`simulation/src/Aloha/`)
 - [2025-11-27] STEP (CAD) files are now available (`/hardware/mobile_base/step/`)
-- URDF files coming soon
 
 
 ### What Makes It Different
