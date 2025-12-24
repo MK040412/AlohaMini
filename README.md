@@ -12,6 +12,7 @@ Use ROS only if you need URDF visualization, RViz inspection, or Gazebo simulati
 
 ## Updates
 
+- [2025-12-24] — **ManiSkill3 Integration**: AlohaMini is now available in ManiSkill3 simulation! See [maniskill/README.md](maniskill/README.md) for details.
 - [2025-12-18] — URDF and simulation assets are now available for visualization and simulation (`simulation/src/Aloha/`)
 - [2025-11-27] STEP (CAD) files are now available (`/hardware/mobile_base/step/`)
 
@@ -94,9 +95,52 @@ AlohaMini is created by:
 Thanks to the open robotics community:  
 **ALOHA · LeKiwi · SO-ARM100 · SO-ARM100-Track-Axis · Pi-0.5 · LeRobot · Hugging Face**
 
-## ⭐ Support AlohaMini
+## ManiSkill3 Simulation
+
+AlohaMini can be used in the [ManiSkill3](https://maniskill.readthedocs.io/) robotics simulation environment for training and testing manipulation and navigation tasks.
+
+### Quick Install
+
+```bash
+# 1. Install ManiSkill3
+pip install mani-skill
+
+# 2. Download ReplicaCAD dataset
+python -m mani_skill.utils.download_asset ReplicaCAD
+
+# 3. Install AlohaMini into ManiSkill
+cd maniskill
+python install.py
+```
+
+### Run Demo
+
+```bash
+cd maniskill/examples
+python demo_virtual_base.py --render
+```
+
+**Controls:**
+- `A/D`: Forward/Backward
+- `W/S`: Rotate Left/Right
+- `Q/E`: Strafe Left/Right
+- `R/F`: Lift Up/Down
+
+### Robot Variants
+
+| Variant | UID | Description |
+|---------|-----|-------------|
+| `aloha_mini` | Physical wheels | Wheel friction research |
+| `aloha_mini_fixed` | Fixed base | Manipulation only |
+| `aloha_mini_virtual` | Virtual mobile base **(Recommended)** | Navigation + Manipulation |
+
+> **Recommended**: Use `aloha_mini_virtual` for stable navigation. It uses prismatic X/Y + rotation joints (same approach as XLeRobot).
+
+See [maniskill/README.md](maniskill/README.md) for detailed documentation.
+
+## Support AlohaMini
 If you like this project:
-- ⭐ Star the repo  
-- 🔔 Follow updates  
-- 💬 Join the community  
+- Star the repo
+- Follow updates
+- Join the community
 
