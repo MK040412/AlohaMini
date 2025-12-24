@@ -122,7 +122,7 @@ python demo_virtual_base.py --render
 
 **Controls (FPS Style):**
 - `A/D`: Forward/Backward
-- `W/S`: Strafe Left/Right
+- `S/W`: Strafe Left/Right
 - `Q/E`: Rotate Left/Right
 - `R/F`: Lift Up/Down
 

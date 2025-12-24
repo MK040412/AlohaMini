@@ -401,7 +401,7 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
 
     Controls:
         A/D: Forward/Backward
-        W/S: Strafe Left/Right
+        S/W: Strafe Left/Right
         Q/E: Rotate Left/Right
         R/F: Lift up/down
         Arrow keys + Z/X: Left arm
@@ -435,7 +435,7 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
 
     print("\n=== Keyboard Controls ===")
     print("A/D: Move forward/backward")
-    print("W/S: Strafe left/right")
+    print("S/W: Strafe left/right")
     print("Q/E: Rotate left/right")
     print("R/F: Lift up/down")
     print("Arrow keys: Left arm joint 1-2")
@@ -466,8 +466,8 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
 
         if keys[pygame.K_a]: vx += base_speed  # forward
         if keys[pygame.K_d]: vx -= base_speed  # backward
-        if keys[pygame.K_w]: vy += base_speed  # strafe left
-        if keys[pygame.K_s]: vy -= base_speed  # strafe right
+        if keys[pygame.K_s]: vy += base_speed  # strafe left
+        if keys[pygame.K_w]: vy -= base_speed  # strafe right
         if keys[pygame.K_q]: omega += base_speed  # rotate CCW
         if keys[pygame.K_e]: omega -= base_speed  # rotate CW
 
@@ -521,12 +521,12 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
             active_keys = []
             if vx > 0: active_keys.append("A")
             if vx < 0: active_keys.append("D")
-            if vy > 0: active_keys.append("W")
-            if vy < 0: active_keys.append("S")
+            if vy > 0: active_keys.append("S")
+            if vy < 0: active_keys.append("W")
             if omega > 0: active_keys.append("Q")
             if omega < 0: active_keys.append("E")
 
-            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'A/D=move W/S=strafe Q/E=rotate'}", True, (200, 200, 200))
+            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'A/D=move S/W=strafe Q/E=rotate'}", True, (200, 200, 200))
             text2 = font.render(f"Wheels: [{w1:.2f}, {w2:.2f}, {w3:.2f}]", True, (150, 200, 150))
             text3 = font.render("Keep this window focused for keyboard input!", True, (255, 200, 100))
 

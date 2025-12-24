@@ -86,7 +86,7 @@ python demo_virtual_base.py --render
 
 **컨트롤 (FPS Style)**:
 - `A/D`: 전진/후진
-- `W/S`: 좌/우 이동 (strafe)
+- `S/W`: 좌/우 이동 (strafe)
 - `Q/E`: 좌/우 회전
 - `R/F`: 리프트 업/다운
 

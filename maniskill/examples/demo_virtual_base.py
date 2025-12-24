@@ -11,7 +11,7 @@ Usage:
 
 Controls:
     A/D: Move forward/backward
-    W/S: Strafe left/right
+    S/W: Strafe left/right
     Q/E: Rotate left/right
     R/F: Lift up/down
 
@@ -127,7 +127,7 @@ def main():
     print("AlohaMini Virtual Base Control")
     print("="*50)
     print("A/D: Forward/Backward")
-    print("W/S: Strafe Left/Right")
+    print("S/W: Strafe Left/Right")
     print("Q/E: Rotate Left/Right")
     print("R/F: Lift Up/Down")
     print("X: Reset, ESC: Quit")
@@ -167,10 +167,10 @@ def main():
             else:
                 action[0] = 0.0
 
-            # Strafe left/right (vy) - W/S keys
-            if keys[pygame.K_w]:
+            # Strafe left/right (vy) - S/W keys
+            if keys[pygame.K_s]:
                 action[1] = move_speed
-            elif keys[pygame.K_s]:
+            elif keys[pygame.K_w]:
                 action[1] = -move_speed
             else:
                 action[1] = 0.0
@@ -222,7 +222,7 @@ def main():
 
         # Controls help
         controls = [
-            "A/D: Forward/Back    W/S: Strafe    Q/E: Rotate",
+            "A/D: Forward/Back    S/W: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down    X: Reset       ESC: Quit"
         ]
         for ctrl in controls:

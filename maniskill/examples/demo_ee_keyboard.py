@@ -12,7 +12,7 @@ Usage:
 Controls:
     Base Movement (Omni Kinematics):
         A/D: Forward/Backward
-        W/S: Strafe Left/Right
+        S/W: Strafe Left/Right
         Q/E: Rotate Left/Right
 
     Lift:
@@ -299,7 +299,7 @@ def main():
     print("\n" + "="*50)
     print("AlohaMini End-Effector Keyboard Control")
     print("="*50)
-    print("Base: A/D=forward/back, W/S=strafe, Q/E=rotate")
+    print("Base: A/D=forward/back, S/W=strafe, Q/E=rotate")
     print("Lift: R/F=up/down")
     print("Left Arm:  Y/7=joint1, 8/U=EE Y, 9/I=EE X, 0/O=pitch, -/P=wrist")
     print("Right Arm: H/N=joint1, J/M=EE Y, K/,=EE X, L/.=pitch, ;/?=wrist")
@@ -359,10 +359,10 @@ def main():
             elif keys[pygame.K_d]:
                 vx = -0.3
 
-            # Strafe - W/S keys
-            if keys[pygame.K_w]:
+            # Strafe - S/W keys
+            if keys[pygame.K_s]:
                 vy = 0.3  # Strafe left
-            elif keys[pygame.K_s]:
+            elif keys[pygame.K_w]:
                 vy = -0.3  # Strafe right
 
             # Rotation (Q/E for rotation)
@@ -502,7 +502,7 @@ def main():
 
         # Controls
         control_texts = [
-            "A/D: Forward/Backward    W/S: Strafe    Q/E: Rotate",
+            "A/D: Forward/Backward    S/W: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down",
             "Y/7: Left Joint1    H/N: Right Joint1",
             "8/U: L-EE Y          J/M: R-EE Y",
