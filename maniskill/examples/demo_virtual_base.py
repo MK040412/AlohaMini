@@ -9,9 +9,9 @@ Usage:
     python demo_virtual_base.py --render
     python demo_virtual_base.py --render --shader rt-fast
 
-Controls (FPS Style):
-    W/S: Move forward/backward
-    A/D: Strafe left/right
+Controls:
+    A/D: Move forward/backward
+    W/S: Strafe left/right
     Q/E: Rotate left/right
     R/F: Lift up/down
 
@@ -124,10 +124,10 @@ def main():
     arm_step = 0.05
 
     print("\n" + "="*50)
-    print("AlohaMini Virtual Base Control (FPS Style)")
+    print("AlohaMini Virtual Base Control")
     print("="*50)
-    print("W/S: Forward/Backward")
-    print("A/D: Strafe Left/Right")
+    print("A/D: Forward/Backward")
+    print("W/S: Strafe Left/Right")
     print("Q/E: Rotate Left/Right")
     print("R/F: Lift Up/Down")
     print("X: Reset, ESC: Quit")
@@ -159,18 +159,18 @@ def main():
             # === Base Control (velocity commands) - FPS Style ===
             # Action[0:3] = base velocities [vx, vy, omega]
 
-            # Forward/backward (vx) - W/S keys
-            if keys[pygame.K_w]:
+            # Forward/backward (vx) - A/D keys
+            if keys[pygame.K_a]:
                 action[0] = move_speed
-            elif keys[pygame.K_s]:
+            elif keys[pygame.K_d]:
                 action[0] = -move_speed
             else:
                 action[0] = 0.0
 
-            # Strafe left/right (vy) - A/D keys
-            if keys[pygame.K_a]:
+            # Strafe left/right (vy) - W/S keys
+            if keys[pygame.K_w]:
                 action[1] = move_speed
-            elif keys[pygame.K_d]:
+            elif keys[pygame.K_s]:
                 action[1] = -move_speed
             else:
                 action[1] = 0.0
@@ -220,9 +220,9 @@ def main():
         screen.blit(title, (10, y_pos))
         y_pos += 30
 
-        # Controls help (FPS Style)
+        # Controls help
         controls = [
-            "W/S: Forward/Back    A/D: Strafe    Q/E: Rotate",
+            "A/D: Forward/Back    W/S: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down    X: Reset       ESC: Quit"
         ]
         for ctrl in controls:

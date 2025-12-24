@@ -9,10 +9,10 @@ Usage:
     python demo_ee_keyboard.py --render
     python demo_ee_keyboard.py --render --shader rt-fast
 
-Controls (FPS Style):
+Controls:
     Base Movement (Omni Kinematics):
-        W/S: Forward/Backward
-        A/D: Strafe Left/Right
+        A/D: Forward/Backward
+        W/S: Strafe Left/Right
         Q/E: Rotate Left/Right
 
     Lift:
@@ -297,9 +297,9 @@ def main():
     warmup_steps = 50
 
     print("\n" + "="*50)
-    print("AlohaMini End-Effector Keyboard Control (FPS Style)")
+    print("AlohaMini End-Effector Keyboard Control")
     print("="*50)
-    print("Base: W/S=forward/back, A/D=strafe, Q/E=rotate")
+    print("Base: A/D=forward/back, W/S=strafe, Q/E=rotate")
     print("Lift: R/F=up/down")
     print("Left Arm:  Y/7=joint1, 8/U=EE Y, 9/I=EE X, 0/O=pitch, -/P=wrist")
     print("Right Arm: H/N=joint1, J/M=EE Y, K/,=EE X, L/.=pitch, ;/?=wrist")
@@ -353,16 +353,16 @@ def main():
             vy = 0.0  # Left/right strafe
             omega = 0.0  # Rotation
 
-            # Forward/backward - W/S keys
-            if keys[pygame.K_w]:
+            # Forward/backward - A/D keys
+            if keys[pygame.K_a]:
                 vx = 0.3
-            elif keys[pygame.K_s]:
+            elif keys[pygame.K_d]:
                 vx = -0.3
 
-            # Strafe - A/D keys
-            if keys[pygame.K_a]:
+            # Strafe - W/S keys
+            if keys[pygame.K_w]:
                 vy = 0.3  # Strafe left
-            elif keys[pygame.K_d]:
+            elif keys[pygame.K_s]:
                 vy = -0.3  # Strafe right
 
             # Rotation (Q/E for rotation)
@@ -500,9 +500,9 @@ def main():
         screen.blit(title, (control_panel_x, y_pos))
         y_pos += 30
 
-        # Controls (FPS Style)
+        # Controls
         control_texts = [
-            "W/S: Forward/Backward    A/D: Strafe    Q/E: Rotate",
+            "A/D: Forward/Backward    W/S: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down",
             "Y/7: Left Joint1    H/N: Right Joint1",
             "8/U: L-EE Y          J/M: R-EE Y",
