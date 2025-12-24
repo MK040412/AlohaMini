@@ -122,8 +122,8 @@ python demo_virtual_base.py --render
 
 **Controls (FPS Style):**
 - `W/S`: Forward/Backward
-- `A/D`: Rotate Left/Right
-- `Q/E`: Strafe Left/Right
+- `A/D`: Strafe Left/Right
+- `Q/E`: Rotate Left/Right
 - `R/F`: Lift Up/Down
 
 ### Robot Variants

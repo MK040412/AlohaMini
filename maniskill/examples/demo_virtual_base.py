@@ -11,8 +11,8 @@ Usage:
 
 Controls (FPS Style):
     W/S: Move forward/backward
-    A/D: Rotate left/right
-    Q/E: Strafe left/right
+    A/D: Strafe left/right
+    Q/E: Rotate left/right
     R/F: Lift up/down
 
     Left Arm: 1-6 keys (decrease) / Shift+1-6 (increase)
@@ -127,8 +127,8 @@ def main():
     print("AlohaMini Virtual Base Control (FPS Style)")
     print("="*50)
     print("W/S: Forward/Backward")
-    print("A/D: Rotate Left/Right")
-    print("Q/E: Strafe Left/Right")
+    print("A/D: Strafe Left/Right")
+    print("Q/E: Rotate Left/Right")
     print("R/F: Lift Up/Down")
     print("X: Reset, ESC: Quit")
     print("="*50 + "\n")
@@ -167,18 +167,18 @@ def main():
             else:
                 action[0] = 0.0
 
-            # Strafe left/right (vy) - Q/E keys
-            if keys[pygame.K_q]:
+            # Strafe left/right (vy) - A/D keys
+            if keys[pygame.K_a]:
                 action[1] = move_speed
-            elif keys[pygame.K_e]:
+            elif keys[pygame.K_d]:
                 action[1] = -move_speed
             else:
                 action[1] = 0.0
 
-            # Rotation (omega) - A/D keys
-            if keys[pygame.K_a]:
+            # Rotation (omega) - Q/E keys
+            if keys[pygame.K_q]:
                 action[2] = rotate_speed
-            elif keys[pygame.K_d]:
+            elif keys[pygame.K_e]:
                 action[2] = -rotate_speed
             else:
                 action[2] = 0.0
@@ -222,7 +222,7 @@ def main():
 
         # Controls help (FPS Style)
         controls = [
-            "W/S: Forward/Back    A/D: Rotate    Q/E: Strafe",
+            "W/S: Forward/Back    A/D: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down    X: Reset       ESC: Quit"
         ]
         for ctrl in controls:

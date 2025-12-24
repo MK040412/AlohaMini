@@ -12,8 +12,8 @@ Usage:
 Controls (FPS Style):
     Base Movement (Omni Kinematics):
         W/S: Forward/Backward
-        A/D: Rotate Left/Right
-        Q/E: Strafe Left/Right
+        A/D: Strafe Left/Right
+        Q/E: Rotate Left/Right
 
     Lift:
         R/F: Lift Up/Down
@@ -299,7 +299,7 @@ def main():
     print("\n" + "="*50)
     print("AlohaMini End-Effector Keyboard Control (FPS Style)")
     print("="*50)
-    print("Base: W/S=forward/back, A/D=rotate, Q/E=strafe")
+    print("Base: W/S=forward/back, A/D=strafe, Q/E=rotate")
     print("Lift: R/F=up/down")
     print("Left Arm:  Y/7=joint1, 8/U=EE Y, 9/I=EE X, 0/O=pitch, -/P=wrist")
     print("Right Arm: H/N=joint1, J/M=EE Y, K/,=EE X, L/.=pitch, ;/?=wrist")
@@ -359,17 +359,17 @@ def main():
             elif keys[pygame.K_s]:
                 vx = -0.3
 
-            # Rotation - A/D keys
+            # Strafe - A/D keys
             if keys[pygame.K_a]:
-                omega = 0.5  # Rotate left
-            elif keys[pygame.K_d]:
-                omega = -0.5  # Rotate right
-
-            # Strafe (Q/E for lateral movement)
-            if keys[pygame.K_q]:
                 vy = 0.3  # Strafe left
-            elif keys[pygame.K_e]:
+            elif keys[pygame.K_d]:
                 vy = -0.3  # Strafe right
+
+            # Rotation (Q/E for rotation)
+            if keys[pygame.K_q]:
+                omega = 0.5  # Rotate left
+            elif keys[pygame.K_e]:
+                omega = -0.5  # Rotate right
 
             # Compute wheel velocities using omni kinematics
             wheel_vels = compute_omni_wheel_velocities(vx, vy, omega)
@@ -502,7 +502,7 @@ def main():
 
         # Controls (FPS Style)
         control_texts = [
-            "W/S: Forward/Backward    A/D: Rotate    Q/E: Strafe",
+            "W/S: Forward/Backward    A/D: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down",
             "Y/7: Left Joint1    H/N: Right Joint1",
             "8/U: L-EE Y          J/M: R-EE Y",

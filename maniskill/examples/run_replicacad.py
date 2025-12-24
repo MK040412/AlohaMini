@@ -401,8 +401,8 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
 
     Controls:
         W/S: Forward/Backward
-        A/D: Rotate Left/Right
-        Q/E: Strafe Left/Right
+        A/D: Strafe Left/Right
+        Q/E: Rotate Left/Right
         R/F: Lift up/down
         Arrow keys + Z/X: Left arm
         IJKL + N/M: Right arm
@@ -435,8 +435,8 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
 
     print("\n=== Keyboard Controls (FPS Style) ===")
     print("W/S: Move forward/backward")
-    print("A/D: Rotate left/right")
-    print("Q/E: Strafe left/right")
+    print("A/D: Strafe left/right")
+    print("Q/E: Rotate left/right")
     print("R/F: Lift up/down")
     print("Arrow keys: Left arm joint 1-2")
     print("Z/X/C/V: Left arm joint 3-6")
@@ -459,17 +459,17 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
         action = np.zeros(action_dim)
         keys = pygame.key.get_pressed()
 
-        # Base movement (FPS Style: W/S forward, A/D rotate, Q/E strafe)
+        # Base movement (FPS Style: W/S forward, A/D strafe, Q/E rotate)
         vx = 0  # forward/backward
         vy = 0  # left/right strafe
         omega = 0  # rotation
 
         if keys[pygame.K_w]: vx += base_speed  # forward
         if keys[pygame.K_s]: vx -= base_speed  # backward
-        if keys[pygame.K_a]: omega += base_speed  # rotate CCW
-        if keys[pygame.K_d]: omega -= base_speed  # rotate CW
-        if keys[pygame.K_q]: vy += base_speed  # strafe left
-        if keys[pygame.K_e]: vy -= base_speed  # strafe right
+        if keys[pygame.K_a]: vy += base_speed  # strafe left
+        if keys[pygame.K_d]: vy -= base_speed  # strafe right
+        if keys[pygame.K_q]: omega += base_speed  # rotate CCW
+        if keys[pygame.K_e]: omega -= base_speed  # rotate CW
 
         # Convert to wheel velocities
         w1, w2, w3 = compute_omni_wheel_velocities(vx, vy, omega)
@@ -521,12 +521,12 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
             active_keys = []
             if vx > 0: active_keys.append("W")
             if vx < 0: active_keys.append("S")
-            if omega > 0: active_keys.append("A")
-            if omega < 0: active_keys.append("D")
-            if vy > 0: active_keys.append("Q")
-            if vy < 0: active_keys.append("E")
+            if vy > 0: active_keys.append("A")
+            if vy < 0: active_keys.append("D")
+            if omega > 0: active_keys.append("Q")
+            if omega < 0: active_keys.append("E")
 
-            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'W/S=move A/D=rotate Q/E=strafe'}", True, (200, 200, 200))
+            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'W/S=move A/D=strafe Q/E=rotate'}", True, (200, 200, 200))
             text2 = font.render(f"Wheels: [{w1:.2f}, {w2:.2f}, {w3:.2f}]", True, (150, 200, 150))
             text3 = font.render("Keep this window focused for keyboard input!", True, (255, 200, 100))
 

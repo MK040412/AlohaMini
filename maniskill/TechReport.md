@@ -244,16 +244,16 @@ world (fixed)
 │                    │  W  │  Forward                                         │
 │                    │ ▲▲▲ │                                                  │
 │              ┌─────┼─────┼─────┐                                           │
-│   Rotate ◀◀ │  A  │     │  D  │ ▶▶ Rotate                                  │
-│     Left    │ ◀◀◀ │     │ ▶▶▶ │    Right                                   │
+│   Strafe ◀◀ │  A  │     │  D  │ ▶▶ Strafe                                  │
+│     Left    │ ◀── │     │ ──▶ │    Right                                   │
 │              └─────┼─────┼─────┘                                           │
 │                    │  S  │  Backward                                        │
 │                    │ ▼▼▼ │                                                  │
 │                    └─────┘                                                  │
 │                                                                             │
 │   ┌─────┐         ┌─────┐                                                  │
-│   │  Q  │ Strafe  │  E  │ Strafe                                           │
-│   │ ◀── │ Left    │ ──▶ │ Right                                            │
+│   │  Q  │ Rotate  │  E  │ Rotate                                           │
+│   │ ◀◀◀ │ Left    │ ▶▶▶ │ Right                                            │
 │   └─────┘         └─────┘                                                  │
 │                                                                             │
 │   ┌─────┐         ┌─────┐                                                  │
@@ -273,15 +273,18 @@ world (fixed)
 ```
 게임 컨트롤 표준 (First-Person Shooter):
 
-    W = Forward     ──▶  자연스러운 "앞으로" 느낌
-    S = Backward    ──▶  자연스러운 "뒤로" 느낌
-    A = Left Turn   ──▶  좌회전 (시야 회전)
-    D = Right Turn  ──▶  우회전 (시야 회전)
+    W = Forward      ──▶  자연스러운 "앞으로" 느낌
+    S = Backward     ──▶  자연스러운 "뒤로" 느낌
+    A = Strafe Left  ──▶  좌측 이동 (평행 이동)
+    D = Strafe Right ──▶  우측 이동 (평행 이동)
+    Q = Rotate Left  ──▶  좌회전
+    E = Rotate Right ──▶  우회전
 
 이점:
     ✅ 게이머에게 친숙한 레이아웃
     ✅ 직관적인 방향 감각
     ✅ 한 손으로 모든 이동 제어 가능
+    ✅ WASD로 이동, QE로 회전 - 명확한 구분
 ```
 
 ---
