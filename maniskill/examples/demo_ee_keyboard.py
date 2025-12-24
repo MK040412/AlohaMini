@@ -9,10 +9,10 @@ Usage:
     python demo_ee_keyboard.py --render
     python demo_ee_keyboard.py --render --shader rt-fast
 
-Controls:
+Controls (FPS Style):
     Base Movement (Omni Kinematics):
-        A/D: Forward/Backward
-        W/S: Rotate Left/Right
+        W/S: Forward/Backward
+        A/D: Rotate Left/Right
         Q/E: Strafe Left/Right
 
     Lift:
@@ -297,9 +297,9 @@ def main():
     warmup_steps = 50
 
     print("\n" + "="*50)
-    print("AlohaMini End-Effector Keyboard Control")
+    print("AlohaMini End-Effector Keyboard Control (FPS Style)")
     print("="*50)
-    print("Base: A/D=forward/back, W/S=rotate, Q/E=strafe")
+    print("Base: W/S=forward/back, A/D=rotate, Q/E=strafe")
     print("Lift: R/F=up/down")
     print("Left Arm:  Y/7=joint1, 8/U=EE Y, 9/I=EE X, 0/O=pitch, -/P=wrist")
     print("Right Arm: H/N=joint1, J/M=EE Y, K/,=EE X, L/.=pitch, ;/?=wrist")
@@ -347,22 +347,22 @@ def main():
 
         # Update controls after warmup
         if step_counter >= warmup_steps:
-            # === Base Control (Omni Wheel Kinematics) ===
+            # === Base Control (Omni Wheel Kinematics) - FPS Style ===
             # Compute velocity commands
             vx = 0.0  # Forward/backward
             vy = 0.0  # Left/right strafe
             omega = 0.0  # Rotation
 
-            # Forward/backward
-            if keys[pygame.K_a]:
+            # Forward/backward - W/S keys
+            if keys[pygame.K_w]:
                 vx = 0.3
-            elif keys[pygame.K_d]:
+            elif keys[pygame.K_s]:
                 vx = -0.3
 
-            # Rotation
-            if keys[pygame.K_w]:
+            # Rotation - A/D keys
+            if keys[pygame.K_a]:
                 omega = 0.5  # Rotate left
-            elif keys[pygame.K_s]:
+            elif keys[pygame.K_d]:
                 omega = -0.5  # Rotate right
 
             # Strafe (Q/E for lateral movement)
@@ -500,9 +500,9 @@ def main():
         screen.blit(title, (control_panel_x, y_pos))
         y_pos += 30
 
-        # Controls
+        # Controls (FPS Style)
         control_texts = [
-            "A/D: Forward/Backward    W/S: Rotate    Q/E: Strafe",
+            "W/S: Forward/Backward    A/D: Rotate    Q/E: Strafe",
             "R/F: Lift Up/Down",
             "Y/7: Left Joint1    H/N: Right Joint1",
             "8/U: L-EE Y          J/M: R-EE Y",

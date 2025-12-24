@@ -397,11 +397,12 @@ def compute_omni_wheel_velocities(vx, vy, omega):
 
 def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
     """
-    Run environment with keyboard control.
+    Run environment with keyboard control (FPS Style).
 
     Controls:
-        WASD: Base movement (omnidirectional)
-        Q/E: Rotate base
+        W/S: Forward/Backward
+        A/D: Rotate Left/Right
+        Q/E: Strafe Left/Right
         R/F: Lift up/down
         Arrow keys + Z/X: Left arm
         IJKL + N/M: Right arm
@@ -432,9 +433,9 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
     action_dim = env.action_space.shape[0]
     print(f"\nAction space dimension: {action_dim}")
 
-    print("\n=== Keyboard Controls ===")
-    print("A/D: Move forward/backward")
-    print("W/S: Rotate CCW/CW")
+    print("\n=== Keyboard Controls (FPS Style) ===")
+    print("W/S: Move forward/backward")
+    print("A/D: Rotate left/right")
     print("Q/E: Strafe left/right")
     print("R/F: Lift up/down")
     print("Arrow keys: Left arm joint 1-2")
@@ -458,15 +459,15 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
         action = np.zeros(action_dim)
         keys = pygame.key.get_pressed()
 
-        # Base movement (A/D forward, W/S rotate, Q/E strafe)
+        # Base movement (FPS Style: W/S forward, A/D rotate, Q/E strafe)
         vx = 0  # forward/backward
         vy = 0  # left/right strafe
         omega = 0  # rotation
 
-        if keys[pygame.K_a]: vx += base_speed  # forward
-        if keys[pygame.K_d]: vx -= base_speed  # backward
-        if keys[pygame.K_w]: omega += base_speed  # rotate CCW
-        if keys[pygame.K_s]: omega -= base_speed  # rotate CW
+        if keys[pygame.K_w]: vx += base_speed  # forward
+        if keys[pygame.K_s]: vx -= base_speed  # backward
+        if keys[pygame.K_a]: omega += base_speed  # rotate CCW
+        if keys[pygame.K_d]: omega -= base_speed  # rotate CW
         if keys[pygame.K_q]: vy += base_speed  # strafe left
         if keys[pygame.K_e]: vy -= base_speed  # strafe right
 
@@ -516,16 +517,16 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
             control_window.fill((40, 40, 40))
             font = pygame.font.Font(None, 24)
 
-            # Show active keys
+            # Show active keys (FPS Style)
             active_keys = []
-            if vx > 0: active_keys.append("A")
-            if vx < 0: active_keys.append("D")
-            if omega > 0: active_keys.append("W")
-            if omega < 0: active_keys.append("S")
+            if vx > 0: active_keys.append("W")
+            if vx < 0: active_keys.append("S")
+            if omega > 0: active_keys.append("A")
+            if omega < 0: active_keys.append("D")
             if vy > 0: active_keys.append("Q")
             if vy < 0: active_keys.append("E")
 
-            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'A/D=move W/S=rotate Q/E=strafe'}", True, (200, 200, 200))
+            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'W/S=move A/D=rotate Q/E=strafe'}", True, (200, 200, 200))
             text2 = font.render(f"Wheels: [{w1:.2f}, {w2:.2f}, {w3:.2f}]", True, (150, 200, 150))
             text3 = font.render("Keep this window focused for keyboard input!", True, (255, 200, 100))
 

@@ -9,9 +9,9 @@ Usage:
     python demo_virtual_base.py --render
     python demo_virtual_base.py --render --shader rt-fast
 
-Controls:
-    A/D: Move forward/backward
-    W/S: Rotate left/right
+Controls (FPS Style):
+    W/S: Move forward/backward
+    A/D: Rotate left/right
     Q/E: Strafe left/right
     R/F: Lift up/down
 
@@ -124,10 +124,10 @@ def main():
     arm_step = 0.05
 
     print("\n" + "="*50)
-    print("AlohaMini Virtual Base Control")
+    print("AlohaMini Virtual Base Control (FPS Style)")
     print("="*50)
-    print("A/D: Forward/Backward")
-    print("W/S: Rotate Left/Right")
+    print("W/S: Forward/Backward")
+    print("A/D: Rotate Left/Right")
     print("Q/E: Strafe Left/Right")
     print("R/F: Lift Up/Down")
     print("X: Reset, ESC: Quit")
@@ -156,18 +156,18 @@ def main():
         current_qpos = get_qpos(robot)
 
         if step_counter >= warmup_steps:
-            # === Base Control (velocity commands) ===
+            # === Base Control (velocity commands) - FPS Style ===
             # Action[0:3] = base velocities [vx, vy, omega]
 
-            # Forward/backward (vx)
-            if keys[pygame.K_a]:
+            # Forward/backward (vx) - W/S keys
+            if keys[pygame.K_w]:
                 action[0] = move_speed
-            elif keys[pygame.K_d]:
+            elif keys[pygame.K_s]:
                 action[0] = -move_speed
             else:
                 action[0] = 0.0
 
-            # Strafe left/right (vy)
+            # Strafe left/right (vy) - Q/E keys
             if keys[pygame.K_q]:
                 action[1] = move_speed
             elif keys[pygame.K_e]:
@@ -175,10 +175,10 @@ def main():
             else:
                 action[1] = 0.0
 
-            # Rotation (omega)
-            if keys[pygame.K_w]:
+            # Rotation (omega) - A/D keys
+            if keys[pygame.K_a]:
                 action[2] = rotate_speed
-            elif keys[pygame.K_s]:
+            elif keys[pygame.K_d]:
                 action[2] = -rotate_speed
             else:
                 action[2] = 0.0
@@ -220,9 +220,9 @@ def main():
         screen.blit(title, (10, y_pos))
         y_pos += 30
 
-        # Controls help
+        # Controls help (FPS Style)
         controls = [
-            "A/D: Forward/Back    W/S: Rotate    Q/E: Strafe",
+            "W/S: Forward/Back    A/D: Rotate    Q/E: Strafe",
             "R/F: Lift Up/Down    X: Reset       ESC: Quit"
         ]
         for ctrl in controls:

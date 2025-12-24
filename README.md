@@ -120,9 +120,9 @@ cd maniskill/examples
 python demo_virtual_base.py --render
 ```
 
-**Controls:**
-- `A/D`: Forward/Backward
-- `W/S`: Rotate Left/Right
+**Controls (FPS Style):**
+- `W/S`: Forward/Backward
+- `A/D`: Rotate Left/Right
 - `Q/E`: Strafe Left/Right
 - `R/F`: Lift Up/Down
 
