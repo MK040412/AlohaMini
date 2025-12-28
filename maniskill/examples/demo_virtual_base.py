@@ -158,20 +158,26 @@ def main():
         if step_counter >= warmup_steps:
             # === Base Control (velocity commands) - FPS Style ===
             # Action[0:3] = base velocities [vx, vy, omega]
+            # ============================================================
+            # NOTE: DO NOT CHANGE THIS MAPPING!
+            # W/S = 전진/후진 (forward/backward) -> action[1]
+            # A/D = 좌/우 이동 (strafe left/right) -> action[0]
+            # Q/E = 회전 (rotation) -> action[2]
+            # ============================================================
 
-            # Forward/backward (vx) - W/S keys
-            if keys[pygame.K_w]:
-                action[0] = move_speed
-            elif keys[pygame.K_s]:
-                action[0] = -move_speed
+            # Strafe left/right - A/D keys -> action[0]
+            if keys[pygame.K_a]:
+                action[0] = move_speed   # strafe left
+            elif keys[pygame.K_d]:
+                action[0] = -move_speed  # strafe right
             else:
                 action[0] = 0.0
 
-            # Strafe left/right (vy) - A/D keys
-            if keys[pygame.K_a]:
-                action[1] = move_speed
-            elif keys[pygame.K_d]:
-                action[1] = -move_speed
+            # Forward/backward - W/S keys -> action[1]
+            if keys[pygame.K_w]:
+                action[1] = move_speed   # forward
+            elif keys[pygame.K_s]:
+                action[1] = -move_speed  # backward
             else:
                 action[1] = 0.0
 

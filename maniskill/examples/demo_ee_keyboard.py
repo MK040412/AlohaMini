@@ -349,21 +349,27 @@ def main():
         if step_counter >= warmup_steps:
             # === Base Control (Omni Wheel Kinematics) - FPS Style ===
             # Compute velocity commands
-            vx = 0.0  # Forward/backward
-            vy = 0.0  # Left/right strafe
+            # ============================================================
+            # NOTE: DO NOT CHANGE THIS MAPPING!
+            # W/S = 전진/후진 (forward/backward) -> vy
+            # A/D = 좌/우 이동 (strafe left/right) -> vx
+            # Q/E = 회전 (rotation) -> omega
+            # ============================================================
+            vx = 0.0  # Strafe left/right
+            vy = 0.0  # Forward/backward
             omega = 0.0  # Rotation
 
-            # Forward/backward - W/S keys
-            if keys[pygame.K_w]:
-                vx = 0.3
-            elif keys[pygame.K_s]:
-                vx = -0.3
-
-            # Strafe - A/D keys
+            # Strafe left/right - A/D keys -> vx
             if keys[pygame.K_a]:
-                vy = 0.3  # Strafe left
+                vx = 0.3   # strafe left
             elif keys[pygame.K_d]:
-                vy = -0.3  # Strafe right
+                vx = -0.3  # strafe right
+
+            # Forward/backward - W/S keys -> vy
+            if keys[pygame.K_w]:
+                vy = 0.3   # forward
+            elif keys[pygame.K_s]:
+                vy = -0.3  # backward
 
             # Rotation (Q/E for rotation)
             if keys[pygame.K_q]:

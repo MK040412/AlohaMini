@@ -464,15 +464,20 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
         action = np.zeros(action_dim)
         keys = pygame.key.get_pressed()
 
-        # Base movement (W/S forward/back, A/D strafe, Q/E rotate)
-        vx = 0  # forward/backward
-        vy = 0  # left/right strafe
+        # ============================================================
+        # NOTE: DO NOT CHANGE THIS MAPPING!
+        # W/S = 전진/후진 (forward/backward) -> vy
+        # A/D = 좌/우 이동 (strafe left/right) -> vx
+        # Q/E = 회전 (rotation) -> omega
+        # ============================================================
+        vx = 0  # strafe left/right
+        vy = 0  # forward/backward
         omega = 0  # rotation
 
-        if keys[pygame.K_w]: vx += base_speed  # forward
-        if keys[pygame.K_s]: vx -= base_speed  # backward
-        if keys[pygame.K_a]: vy += base_speed  # strafe left
-        if keys[pygame.K_d]: vy -= base_speed  # strafe right
+        if keys[pygame.K_a]: vx += base_speed  # strafe left
+        if keys[pygame.K_d]: vx -= base_speed  # strafe right
+        if keys[pygame.K_w]: vy += base_speed  # forward
+        if keys[pygame.K_s]: vy -= base_speed  # backward
         if keys[pygame.K_q]: omega += base_speed  # rotate CCW
         if keys[pygame.K_e]: omega -= base_speed  # rotate CW
 
@@ -535,16 +540,16 @@ def run_keyboard_control(env, show_camera=False, camera_scale=1.0):
             control_window.fill((40, 40, 40))
             font = pygame.font.Font(None, 24)
 
-            # Show active keys
+            # Show active keys (vx=strafe A/D, vy=forward/back W/S)
             active_keys = []
-            if vx > 0: active_keys.append("W")
-            if vx < 0: active_keys.append("S")
-            if vy > 0: active_keys.append("A")
-            if vy < 0: active_keys.append("D")
+            if vx > 0: active_keys.append("A")   # strafe left
+            if vx < 0: active_keys.append("D")   # strafe right
+            if vy > 0: active_keys.append("W")   # forward
+            if vy < 0: active_keys.append("S")   # backward
             if omega > 0: active_keys.append("Q")
             if omega < 0: active_keys.append("E")
 
-            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'W/S=move A/D=strafe Q/E=rotate'}", True, (200, 200, 200))
+            text1 = font.render(f"Base: {' '.join(active_keys) if active_keys else 'W/S=forward A/D=strafe Q/E=rotate'}", True, (200, 200, 200))
             text2 = font.render(f"Wheels: [{w1:.2f}, {w2:.2f}, {w3:.2f}]", True, (150, 200, 150))
             text3 = font.render("Keep this window focused for keyboard input!", True, (255, 200, 100))
 
