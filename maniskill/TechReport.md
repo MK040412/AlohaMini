@@ -241,14 +241,14 @@ world (fixed)
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │                    ┌─────┐                                                  │
-│                    │  W  │  Strafe Right                                    │
-│                    │ ▶▶▶ │                                                  │
+│                    │  W  │  Forward                                         │
+│                    │ ▲▲▲ │                                                  │
 │              ┌─────┼─────┼─────┐                                           │
-│   Forward   │  A  │     │  D  │  Backward                                  │
-│     ▲▲▲     │ ▲── │     │ ──▼ │    ▼▼▼                                     │
+│   Strafe    │  A  │     │  D  │  Strafe                                    │
+│    Left     │ ◀── │     │ ──▶ │   Right                                    │
 │              └─────┼─────┼─────┘                                           │
-│                    │  S  │  Strafe Left                                     │
-│                    │ ◀◀◀ │                                                  │
+│                    │  S  │  Backward                                        │
+│                    │ ▼▼▼ │                                                  │
 │                    └─────┘                                                  │
 │                                                                             │
 │   ┌─────┐         ┌─────┐                                                  │
@@ -271,20 +271,20 @@ world (fixed)
 ### 5.2 FPS Style Rationale
 
 ```
-로봇 조작 컨트롤 (User-defined):
+FPS 스타일 컨트롤:
 
-    A = Forward      ──▶  전진
-    D = Backward     ──▶  후진
-    S = Strafe Left  ──▶  좌측 이동 (평행 이동)
-    W = Strafe Right ──▶  우측 이동 (평행 이동)
+    W = Forward      ──▶  전진
+    S = Backward     ──▶  후진
+    A = Strafe Left  ──▶  좌측 이동 (평행 이동)
+    D = Strafe Right ──▶  우측 이동 (평행 이동)
     Q = Rotate Left  ──▶  좌회전
     E = Rotate Right ──▶  우회전
 
 이점:
-    ✅ 사용자 정의 레이아웃
+    ✅ 표준 FPS 게임 레이아웃
     ✅ 직관적인 방향 감각
     ✅ 한 손으로 모든 이동 제어 가능
-    ✅ AD로 전후진, SW로 좌우이동, QE로 회전 - 명확한 구분
+    ✅ WASD로 이동, QE로 회전 - 명확한 구분
 ```
 
 ---

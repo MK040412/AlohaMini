@@ -10,8 +10,8 @@ Usage:
     python demo_virtual_base.py --render --shader rt-fast
 
 Controls:
-    A/D: Move forward/backward
-    S/W: Strafe left/right
+    W/S: Move forward/backward
+    A/D: Strafe left/right
     Q/E: Rotate left/right
     R/F: Lift up/down
 
@@ -126,8 +126,8 @@ def main():
     print("\n" + "="*50)
     print("AlohaMini Virtual Base Control")
     print("="*50)
-    print("A/D: Forward/Backward")
-    print("S/W: Strafe Left/Right")
+    print("W/S: Forward/Backward")
+    print("A/D: Strafe Left/Right")
     print("Q/E: Rotate Left/Right")
     print("R/F: Lift Up/Down")
     print("X: Reset, ESC: Quit")
@@ -159,18 +159,18 @@ def main():
             # === Base Control (velocity commands) - FPS Style ===
             # Action[0:3] = base velocities [vx, vy, omega]
 
-            # Forward/backward (vx) - A/D keys
-            if keys[pygame.K_a]:
+            # Forward/backward (vx) - W/S keys
+            if keys[pygame.K_w]:
                 action[0] = move_speed
-            elif keys[pygame.K_d]:
+            elif keys[pygame.K_s]:
                 action[0] = -move_speed
             else:
                 action[0] = 0.0
 
-            # Strafe left/right (vy) - S/W keys
-            if keys[pygame.K_s]:
+            # Strafe left/right (vy) - A/D keys
+            if keys[pygame.K_a]:
                 action[1] = move_speed
-            elif keys[pygame.K_w]:
+            elif keys[pygame.K_d]:
                 action[1] = -move_speed
             else:
                 action[1] = 0.0
@@ -186,7 +186,7 @@ def main():
             # === Lift Control ===
             if keys[pygame.K_r]:
                 target[3] += lift_step
-                target[3] = min(0.15, target[3])
+                target[3] = min(0.6, target[3])  # Max lift 60cm
             if keys[pygame.K_f]:
                 target[3] -= lift_step
                 target[3] = max(0.0, target[3])
@@ -208,6 +208,21 @@ def main():
 
         if args.render:
             env.render()
+            # Update camera to follow robot from above
+            viewer = env.unwrapped._viewer
+            if viewer is not None and robot is not None:
+                try:
+                    # Get robot base position
+                    robot_pos = robot.pose.p
+                    # Camera follows from above (offset: 2m behind, 3m up)
+                    cam_x = float(robot_pos[0]) - 1.5
+                    cam_y = float(robot_pos[1])
+                    cam_z = float(robot_pos[2]) + 3.0
+                    viewer.set_camera_xyz(cam_x, cam_y, cam_z)
+                    # Look down at the robot (pitch down ~60 degrees)
+                    viewer.set_camera_rpy(0, -1.0, 0)
+                except:
+                    pass  # Skip if camera control not available
 
         # === Draw Control Panel ===
         screen.fill((30, 30, 30))
@@ -222,7 +237,7 @@ def main():
 
         # Controls help
         controls = [
-            "A/D: Forward/Back    S/W: Strafe    Q/E: Rotate",
+            "W/S: Forward/Back    A/D: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down    X: Reset       ESC: Quit"
         ]
         for ctrl in controls:

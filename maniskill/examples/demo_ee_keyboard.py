@@ -11,8 +11,8 @@ Usage:
 
 Controls:
     Base Movement (Omni Kinematics):
-        A/D: Forward/Backward
-        S/W: Strafe Left/Right
+        W/S: Forward/Backward
+        A/D: Strafe Left/Right
         Q/E: Rotate Left/Right
 
     Lift:
@@ -299,7 +299,7 @@ def main():
     print("\n" + "="*50)
     print("AlohaMini End-Effector Keyboard Control")
     print("="*50)
-    print("Base: A/D=forward/back, S/W=strafe, Q/E=rotate")
+    print("Base: W/S=forward/back, A/D=strafe, Q/E=rotate")
     print("Lift: R/F=up/down")
     print("Left Arm:  Y/7=joint1, 8/U=EE Y, 9/I=EE X, 0/O=pitch, -/P=wrist")
     print("Right Arm: H/N=joint1, J/M=EE Y, K/,=EE X, L/.=pitch, ;/?=wrist")
@@ -353,16 +353,16 @@ def main():
             vy = 0.0  # Left/right strafe
             omega = 0.0  # Rotation
 
-            # Forward/backward - A/D keys
-            if keys[pygame.K_a]:
+            # Forward/backward - W/S keys
+            if keys[pygame.K_w]:
                 vx = 0.3
-            elif keys[pygame.K_d]:
+            elif keys[pygame.K_s]:
                 vx = -0.3
 
-            # Strafe - S/W keys
-            if keys[pygame.K_s]:
+            # Strafe - A/D keys
+            if keys[pygame.K_a]:
                 vy = 0.3  # Strafe left
-            elif keys[pygame.K_w]:
+            elif keys[pygame.K_d]:
                 vy = -0.3  # Strafe right
 
             # Rotation (Q/E for rotation)
@@ -380,7 +380,7 @@ def main():
             # === Lift Control ===
             if keys[pygame.K_r]:
                 target_joints[3] += joint_step
-                target_joints[3] = min(0.15, target_joints[3])
+                target_joints[3] = min(0.6, target_joints[3])  # Max lift 60cm
             if keys[pygame.K_f]:
                 target_joints[3] -= joint_step
                 target_joints[3] = max(0.0, target_joints[3])
@@ -502,7 +502,7 @@ def main():
 
         # Controls
         control_texts = [
-            "A/D: Forward/Backward    S/W: Strafe    Q/E: Rotate",
+            "W/S: Forward/Backward    A/D: Strafe    Q/E: Rotate",
             "R/F: Lift Up/Down",
             "Y/7: Left Joint1    H/N: Right Joint1",
             "8/U: L-EE Y          J/M: R-EE Y",
