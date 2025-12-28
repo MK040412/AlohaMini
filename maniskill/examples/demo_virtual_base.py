@@ -175,9 +175,9 @@ def main():
 
             # Forward/backward - W/S keys -> action[1]
             if keys[pygame.K_w]:
-                action[1] = move_speed   # forward
+                action[1] = -move_speed  # forward (negative in robot coords)
             elif keys[pygame.K_s]:
-                action[1] = -move_speed  # backward
+                action[1] = move_speed   # backward (positive in robot coords)
             else:
                 action[1] = 0.0
 
