@@ -93,22 +93,32 @@ class AlohaMiniVirtual(BaseAgent):
         from scipy.spatial.transform import Rotation as R
 
         def euler_to_quat(roll, pitch, yaw):
-            r = R.from_euler('xyz', [roll, pitch, yaw])
+            # Use ZYX (yaw-pitch-roll) convention
+            r = R.from_euler('ZYX', [yaw, pitch, roll])
             q = r.as_quat()
             return [q[3], q[0], q[1], q[2]]
 
-        q1 = euler_to_quat(math.radians(135), 0, 0)
+        # First-person camera configuration:
+        # - Both arms visible at bottom corners (left and right)
+        # - Looking down at workspace
+        # - Room/environment visible ahead
+        # Mounted on vertical_link for stable first-person view
+        q1 = euler_to_quat(
+            math.radians(180),    # roll: 180° to flip view (arms at bottom)
+            math.radians(-45),    # pitch: -45° down toward workspace
+            math.radians(90)      # yaw: 90° to face forward direction
+        )
 
         return [
             CameraConfig(
                 uid="cam_main",
                 pose=Pose.create_from_pq(
-                    p=[0.0, -0.35, 0.45],
+                    p=[0.0, -0.20, 0.70],  # Positioned to see both arms
                     q=q1,
                 ),
                 width=320,
                 height=240,
-                fov=1.4,
+                fov=2.0,  # Wide FOV to capture both arms
                 near=0.01,
                 far=100,
                 entity_uid="vertical_link",

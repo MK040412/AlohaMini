@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AlohaMini VR Teleop</title>
+    <meta name="description" content="VR Teleoperation for AlohaMini Robot">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+    <script src="vr_app.js" defer></script>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <!-- Desktop Interface -->
+    <div class="desktop-interface" id="desktopInterface">
+      <div class="desktop-header">
+        <div class="desktop-title">AlohaMini VR Teleop</div>
+        <div class="desktop-subtitle">ManiSkill3 robot control via VR controllers</div>
+
+        <div class="status-section">
+          <h2>Status</h2>
+          <div class="status-grid">
+            <div class="status-item">
+              <div class="status-indicator" id="wsStatus"></div>
+              <span>WebSocket</span>
+            </div>
+            <div class="status-item">
+              <div class="status-indicator" id="vrStatus"></div>
+              <span>VR Connected</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- VR Instructions Section -->
+        <div class="vr-instructions-section">
+          <h2>VR Controller Instructions</h2>
+          <div class="instructions-content">
+            <div class="instructions-text">
+              <div class="instruction-item">
+                <strong>Setup:</strong> Open this page in your VR headset browser and click "Start Controller Tracking"
+              </div>
+              <div class="instruction-item">
+                <strong>Right Thumbstick:</strong> Move robot base (forward/back/strafe)
+              </div>
+              <div class="instruction-item">
+                <strong>Left Thumbstick:</strong> Rotate robot base (left/right)
+              </div>
+              <div class="instruction-item">
+                <strong>Grip Button:</strong> Hold to track arm position with controller
+              </div>
+              <div class="instruction-item">
+                <strong>Trigger Button:</strong> Close gripper (release to open)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A-Frame VR Scene (XLeRobot style) -->
+    <a-scene vr-mode-ui="enabled: true;">
+      <!-- Passthrough setup for Quest -->
+      <a-entity webxr-passthrough="referenceSpaceType: local-floor"></a-entity>
+
+      <!-- Headset tracking entity -->
+      <a-entity id="headset" camera>
+        <a-text id="headsetInfo" value="Headset: ..." position="0 0.2 -0.5" rotation="0 0 0" scale="0.05 0.05 0.05" color="yellow" align="center"></a-text>
+      </a-entity>
+
+      <!-- Controllers (XLeRobot naming convention) -->
+      <a-entity id="leftHand" oculus-touch-controls="hand: left">
+        <a-text id="leftHandInfo" value="Pos: ...\nRot: ..." position="0 0.04 -0.05" rotation="0 0 0" scale="0.05 0.05 0.05" color="white" align="center"></a-text>
+      </a-entity>
+      <a-entity id="rightHand" oculus-touch-controls="hand: right">
+        <a-text id="rightHandInfo" value="Pos: ...\nRot: ..." position="0 0.04 -0.05" rotation="0 0 0" scale="0.05 0.05 0.05" color="white" align="center"></a-text>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>

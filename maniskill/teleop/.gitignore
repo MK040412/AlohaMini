@@ -1,0 +1,16 @@
+# Generated images
+camera_views/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE configs
+.claude/
+.marscode/
+
+# SSL certificates
+*.pem
+
+# STL images
+stl_images/
