@@ -214,11 +214,11 @@ def get_local_ip():
 
 
 def create_web_ui():
-    """Create the web UI files for camera streaming."""
+    """Create the web UI files for camera streaming with WebGL VR rendering."""
     web_dir = Path(__file__).parent / 'web_ui_stream'
     web_dir.mkdir(exist_ok=True)
 
-    # Create index.html
+    # Create index.html with WebGL VR rendering
     html_content = '''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -265,15 +265,8 @@ def create_web_ui():
             padding: 15px;
             border-radius: 10px;
         }
-        .control-group h3 {
-            color: #00d4ff;
-            margin-bottom: 10px;
-        }
-        .control-item {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-        }
+        .control-group h3 { color: #00d4ff; margin-bottom: 10px; }
+        .control-item { display: flex; justify-content: space-between; margin: 5px 0; }
         #vr-button {
             margin-top: 20px;
             padding: 15px 40px;
@@ -287,34 +280,32 @@ def create_web_ui():
         }
         #vr-button:hover { background: #00b4d8; }
         #vr-button:disabled { background: #666; cursor: not-allowed; }
-        .info { color: #888; font-size: 14px; margin-top: 20px; }
+        .info { color: #888; font-size: 14px; margin-top: 20px; text-align: center; }
+        #gl-canvas { display: none; }
     </style>
 </head>
 <body>
     <h1>AlohaMini VR Teleoperation</h1>
     <div id="status" class="connecting">Connecting...</div>
-
-    <img id="camera-view" width="640" height="480" alt="Camera View">
+    <canvas id="gl-canvas" width="1920" height="1080"></canvas>
+    <img id="camera-view" width="640" height="480" alt="Camera View" crossorigin="anonymous">
 
     <div id="controls">
         <div class="control-group">
             <h3>Left Controller</h3>
             <div class="control-item"><span>Thumbstick:</span><span id="left-thumb">0.00, 0.00</span></div>
             <div class="control-item"><span>Trigger:</span><span id="left-trigger">0.00</span></div>
-            <div class="control-item"><span>Grip:</span><span id="left-grip">Released</span></div>
         </div>
         <div class="control-group">
             <h3>Right Controller</h3>
             <div class="control-item"><span>Thumbstick:</span><span id="right-thumb">0.00, 0.00</span></div>
             <div class="control-item"><span>Trigger:</span><span id="right-trigger">0.00</span></div>
-            <div class="control-item"><span>Grip:</span><span id="right-grip">Released</span></div>
         </div>
     </div>
 
     <button id="vr-button" onclick="startVR()">Enter VR Mode</button>
-
     <p class="info">
-        Controls: Left thumbstick = Move | Right thumbstick = Rotate/Lift | Triggers = Grippers
+        Left Stick: Move/Strafe | Right Stick: Rotate/Lift | Triggers: Grippers
     </p>
 
     <script>
@@ -322,6 +313,139 @@ def create_web_ui():
         const host = window.location.hostname;
         let ws = null;
         let xrSession = null;
+        let gl = null;
+        let shaderProgram = null;
+        let cameraTexture = null;
+        let positionBuffer = null;
+        let texCoordBuffer = null;
+        let latestFrameData = null;
+        let textureNeedsUpdate = false;
+
+        // Vertex shader - full screen quad
+        const vsSource = `
+            attribute vec4 aPosition;
+            attribute vec2 aTexCoord;
+            varying vec2 vTexCoord;
+            void main() {
+                gl_Position = aPosition;
+                vTexCoord = aTexCoord;
+            }
+        `;
+
+        // Fragment shader - texture sampling
+        const fsSource = `
+            precision mediump float;
+            varying vec2 vTexCoord;
+            uniform sampler2D uTexture;
+            void main() {
+                gl_FragColor = texture2D(uTexture, vTexCoord);
+            }
+        `;
+
+        function initWebGL() {
+            const canvas = document.getElementById('gl-canvas');
+            gl = canvas.getContext('webgl2', { xrCompatible: true });
+            if (!gl) {
+                gl = canvas.getContext('webgl', { xrCompatible: true });
+            }
+            if (!gl) {
+                console.error('WebGL not supported');
+                return false;
+            }
+
+            // Compile shaders
+            const vs = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(vs, vsSource);
+            gl.compileShader(vs);
+            if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+                console.error('VS error:', gl.getShaderInfoLog(vs));
+                return false;
+            }
+
+            const fs = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(fs, fsSource);
+            gl.compileShader(fs);
+            if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+                console.error('FS error:', gl.getShaderInfoLog(fs));
+                return false;
+            }
+
+            // Link program
+            shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vs);
+            gl.attachShader(shaderProgram, fs);
+            gl.linkProgram(shaderProgram);
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                console.error('Link error:', gl.getProgramInfoLog(shaderProgram));
+                return false;
+            }
+
+            // Setup buffers - full screen quad
+            const positions = new Float32Array([
+                -1, -1,  1, -1,  -1, 1,  1, 1
+            ]);
+            positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+            const texCoords = new Float32Array([
+                0, 1,  1, 1,  0, 0,  1, 0
+            ]);
+            texCoordBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, texCoords, gl.STATIC_DRAW);
+
+            // Create texture
+            cameraTexture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, cameraTexture);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+            // Initialize with placeholder
+            const pixel = new Uint8Array([50, 50, 80, 255]);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+
+            console.log('WebGL initialized');
+            return true;
+        }
+
+        function updateTexture() {
+            if (!gl || !cameraTexture || !textureNeedsUpdate) return;
+            const img = document.getElementById('camera-view');
+            if (img.complete && img.naturalWidth > 0) {
+                gl.bindTexture(gl.TEXTURE_2D, cameraTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+                textureNeedsUpdate = false;
+            }
+        }
+
+        function renderQuad() {
+            if (!gl || !shaderProgram) return;
+
+            gl.useProgram(shaderProgram);
+
+            // Position attribute
+            const posLoc = gl.getAttribLocation(shaderProgram, 'aPosition');
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.enableVertexAttribArray(posLoc);
+            gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
+
+            // TexCoord attribute
+            const texLoc = gl.getAttribLocation(shaderProgram, 'aTexCoord');
+            gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+            gl.enableVertexAttribArray(texLoc);
+            gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
+
+            // Texture
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, cameraTexture);
+            gl.uniform1i(gl.getUniformLocation(shaderProgram, 'uTexture'), 0);
+
+            // Draw
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
 
         function connect() {
             const statusEl = document.getElementById('status');
@@ -333,7 +457,6 @@ def create_web_ui():
             ws.onopen = () => {
                 statusEl.className = 'connected';
                 statusEl.textContent = 'Connected';
-                console.log('WebSocket connected');
             };
 
             ws.onclose = () => {
@@ -342,16 +465,15 @@ def create_web_ui():
                 setTimeout(connect, 2000);
             };
 
-            ws.onerror = (err) => {
-                console.error('WebSocket error:', err);
-            };
+            ws.onerror = (err) => console.error('WebSocket error:', err);
 
             ws.onmessage = (event) => {
                 try {
                     const msg = JSON.parse(event.data);
                     if (msg.type === 'frame') {
-                        document.getElementById('camera-view').src =
-                            'data:image/jpeg;base64,' + msg.data;
+                        const img = document.getElementById('camera-view');
+                        img.src = 'data:image/jpeg;base64,' + msg.data;
+                        textureNeedsUpdate = true;
                     }
                 } catch (e) {
                     console.error('Parse error:', e);
@@ -359,18 +481,27 @@ def create_web_ui():
             };
         }
 
-        function sendControllerData(leftController, rightController) {
+        function sendControllerData(left, right) {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({
-                    leftController: leftController,
-                    rightController: rightController
-                }));
+                ws.send(JSON.stringify({ leftController: left, rightController: right }));
             }
         }
 
         async function startVR() {
+            // Check for existing session
+            if (xrSession) {
+                console.log('VR session already active');
+                return;
+            }
+
             if (!navigator.xr) {
                 alert('WebXR not supported');
+                return;
+            }
+
+            // Initialize WebGL if not done
+            if (!gl && !initWebGL()) {
+                alert('WebGL initialization failed');
                 return;
             }
 
@@ -388,10 +519,9 @@ def create_web_ui():
                     xrSession = null;
                 });
 
-                const gl = document.createElement('canvas').getContext('webgl2');
-                await xrSession.updateRenderState({
-                    baseLayer: new XRWebGLLayer(xrSession, gl)
-                });
+                // Setup XR rendering
+                const glLayer = new XRWebGLLayer(xrSession, gl);
+                await xrSession.updateRenderState({ baseLayer: glLayer });
 
                 const refSpace = await xrSession.requestReferenceSpace('local-floor');
 
@@ -399,44 +529,48 @@ def create_web_ui():
                     const session = frame.session;
                     session.requestAnimationFrame(onXRFrame);
 
-                    const inputSources = session.inputSources;
-                    let leftData = null;
-                    let rightData = null;
-
-                    for (const source of inputSources) {
-                        const gamepad = source.gamepad;
-                        if (!gamepad) continue;
+                    // Process controllers
+                    let leftData = {}, rightData = {};
+                    for (const source of session.inputSources) {
+                        const gp = source.gamepad;
+                        if (!gp) continue;
 
                         const data = {
-                            thumbstick: {
-                                x: gamepad.axes[2] || 0,
-                                y: gamepad.axes[3] || 0
-                            },
-                            trigger: gamepad.buttons[0]?.value || 0,
-                            grip: gamepad.buttons[1]?.pressed || false
+                            thumbstick: { x: gp.axes[2] || 0, y: gp.axes[3] || 0 },
+                            trigger: gp.buttons[0]?.value || 0,
+                            grip: gp.buttons[1]?.pressed || false
                         };
 
                         if (source.handedness === 'left') {
                             leftData = data;
                             document.getElementById('left-thumb').textContent =
                                 `${data.thumbstick.x.toFixed(2)}, ${data.thumbstick.y.toFixed(2)}`;
-                            document.getElementById('left-trigger').textContent =
-                                data.trigger.toFixed(2);
-                            document.getElementById('left-grip').textContent =
-                                data.grip ? 'Pressed' : 'Released';
+                            document.getElementById('left-trigger').textContent = data.trigger.toFixed(2);
                         } else if (source.handedness === 'right') {
                             rightData = data;
                             document.getElementById('right-thumb').textContent =
                                 `${data.thumbstick.x.toFixed(2)}, ${data.thumbstick.y.toFixed(2)}`;
-                            document.getElementById('right-trigger').textContent =
-                                data.trigger.toFixed(2);
-                            document.getElementById('right-grip').textContent =
-                                data.grip ? 'Pressed' : 'Released';
+                            document.getElementById('right-trigger').textContent = data.trigger.toFixed(2);
                         }
                     }
+                    sendControllerData(leftData, rightData);
 
-                    if (leftData || rightData) {
-                        sendControllerData(leftData || {}, rightData || {});
+                    // Update texture from latest camera frame
+                    updateTexture();
+
+                    // Render to VR
+                    const pose = frame.getViewerPose(refSpace);
+                    if (pose) {
+                        const layer = session.renderState.baseLayer;
+
+                        for (const view of pose.views) {
+                            const vp = layer.getViewport(view);
+                            gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+                            gl.viewport(vp.x, vp.y, vp.width, vp.height);
+                            gl.clearColor(0.1, 0.1, 0.15, 1.0);
+                            gl.clear(gl.COLOR_BUFFER_BIT);
+                            renderQuad();
+                        }
                     }
                 }
 
@@ -445,6 +579,7 @@ def create_web_ui():
             } catch (err) {
                 console.error('VR Error:', err);
                 alert('Failed to start VR: ' + err.message);
+                xrSession = null;
             }
         }
 
@@ -461,7 +596,8 @@ def create_web_ui():
             document.getElementById('vr-button').textContent = 'WebXR Not Available';
         }
 
-        // Start connection
+        // Initialize
+        initWebGL();
         connect();
     </script>
 </body>
