@@ -92,36 +92,36 @@ class AlohaMiniVirtual(BaseAgent):
         import math
         from scipy.spatial.transform import Rotation as R
 
-        def euler_to_quat(roll, pitch, yaw):
-            # Use ZYX (yaw-pitch-roll) convention
-            r = R.from_euler('ZYX', [yaw, pitch, roll])
+        def euler_to_quat_xyz(rx, ry, rz):
+            # XYZ euler convention
+            r = R.from_euler('xyz', [rx, ry, rz])
             q = r.as_quat()
             return [q[3], q[0], q[1], q[2]]
 
         # First-person camera configuration:
-        # - Both arms visible at bottom corners (left and right)
-        # - Looking down at workspace
-        # - Room/environment visible ahead
-        # Mounted on vertical_link for stable first-person view
-        q1 = euler_to_quat(
-            math.radians(180),    # roll: 180° to flip view (arms at bottom)
-            math.radians(-45),    # pitch: -45° down toward workspace
-            math.radians(90)      # yaw: 90° to face forward direction
+        # - Both arms visible (left and right sides)
+        # - Looking straight down at workspace
+        # - Position: 1.45m above base_link
+        # - Rotation: rx=90°, ry=90° to look down
+        q1 = euler_to_quat_xyz(
+            math.radians(90),     # rx: 90° rotation around X
+            math.radians(90),     # ry: 90° rotation around Y (look down)
+            math.radians(0)       # rz: no rotation around Z
         )
 
         return [
             CameraConfig(
                 uid="cam_main",
                 pose=Pose.create_from_pq(
-                    p=[0.0, -0.20, 0.70],  # Positioned to see both arms
+                    p=[0.0, 0.0, 1.45],  # 1.45m above base_link
                     q=q1,
                 ),
                 width=320,
                 height=240,
-                fov=2.0,  # Wide FOV to capture both arms
+                fov=1.5,
                 near=0.01,
                 far=100,
-                entity_uid="vertical_link",
+                entity_uid="base_link",
             ),
         ]
 
