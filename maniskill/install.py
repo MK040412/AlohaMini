@@ -91,8 +91,8 @@ def install():
         content = robots_init.read_text()
         if "aloha_mini" not in content:
             print(f"\nRegistering AlohaMini agent...")
-            # Add import
-            new_import = 'from .aloha_mini import AlohaMini, AlohaMiniFixed, AlohaMiniVirtual, ALOHA_MINI_BASE_COLLISION_BIT, ALOHA_MINI_WHEELS_COLLISION_BIT'
+            # Add import for SO100V2 agent
+            new_import = 'from .aloha_mini import AlohaMiniSO100V2, AlohaMiniBaseAgent'
             if "# Robot imports" in content:
                 content = content.replace("# Robot imports", f"# Robot imports\n{new_import}")
             else:
