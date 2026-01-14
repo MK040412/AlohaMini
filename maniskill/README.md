@@ -1,80 +1,90 @@
 # AlohaMini ManiSkill3 Integration
 
-AlohaMini 듀얼 암 모바일 로봇을 ManiSkill3 시뮬레이션 환경에서 사용하기 위한 통합 가이드입니다.
+Integration guide for using the AlohaMini dual-arm mobile robot in ManiSkill3 simulation environment.
 
 ## Overview
 
-AlohaMini는 다음과 같은 구성을 가진 듀얼 암 모바일 로봇입니다:
-- **모바일 베이스**: 가상 prismatic X/Y + rotation 조인트
-- **수직 리프트**: 1 DOF 프리즘매틱 조인트
-- **듀얼 암**: 좌/우 각 6 DOF SO100 매니퓰레이터
+AlohaMini is a dual-arm mobile robot with the following configuration:
+- **Mobile Base**: Virtual prismatic X/Y + rotation joints
+- **Vertical Lift**: 1 DOF prismatic joint
+- **Dual Arms**: Left/Right 6 DOF SO100 manipulators each
 
-**총 DOF**: 16 (베이스 3 + 리프트 1 + 좌팔 6 + 우팔 6)
+**Total DOF**: 16 (base 3 + lift 1 + left arm 6 + right arm 6)
 
 ## Directory Structure
 
 ```
 maniskill/
-├── agents/aloha_mini/           # 에이전트 클래스 파일
+├── agents/aloha_mini/           # Agent class files
 │   ├── __init__.py
-│   ├── base_agent.py            # AlohaMiniBaseAgent (추상 클래스)
-│   └── aloha_mini_so100_v2.py   # AlohaMiniSO100V2 (메인 에이전트)
-├── assets/robots/aloha_mini/    # URDF 및 메시 파일
+│   ├── base_agent.py            # AlohaMiniBaseAgent (abstract)
+│   └── aloha_mini_so100_v2.py   # AlohaMiniSO100V2 (main agent)
+├── assets/robots/aloha_mini/    # URDF and mesh files
 │   ├── maniskill_so100_version.urdf
-│   └── so100_meshes/            # STL/PLY 메시 파일들
-├── teleop/                      # 텔레오프레이션 모듈
-│   ├── demo_teleop.py           # 키보드 IK 텔레오프 (권장)
-│   ├── demo_vr_teleop_stream.py # VR 텔레오프 + 카메라 스트리밍
+│   └── so100_meshes/            # STL/PLY mesh files
+├── teleop/                      # Teleoperation module
+│   ├── demo_teleop.py           # Keyboard IK teleop (recommended)
+│   ├── demo_vr_teleop_stream.py # VR teleop + camera streaming
 │   ├── controller.py            # TeleopController
 │   ├── config.py                # TeleopConfig
-│   ├── inputs/                  # 입력 핸들러 (keyboard, VR)
-│   ├── kinematics/              # IK 모듈
-│   └── web_ui_stream/           # VR 웹 UI
-├── examples/                    # 예제 스크립트
-│   ├── demo_ee_keyboard.py      # EE 키보드 컨트롤
-│   └── run_replicacad.py        # ReplicaCAD 환경 실행
-├── scene_builder/replicacad/    # 수정된 씬 빌더
+│   ├── inputs/                  # Input handlers (keyboard, VR)
+│   ├── kinematics/              # IK modules
+│   └── web_ui_stream/           # VR web UI
+├── examples/                    # Example scripts
+│   ├── demo_ee_keyboard.py      # EE keyboard control
+│   └── run_replicacad.py        # ReplicaCAD environment
+├── scene_builder/replicacad/    # Modified scene builder
 │   └── scene_builder.py
-├── install.py                   # 설치 스크립트
-├── setup.py                     # 패키지 설정
+├── install.py                   # Installation script
+├── setup.py                     # Package setup
 └── README.md
 ```
 
 ## Installation
 
-### 1. 가상환경 생성
+### Using UV (Recommended - Faster)
+
+[UV](https://github.com/astral-sh/uv) is a fast Python package installer.
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or: venv\Scripts\activate  # Windows
-```
+# Install UV (if not installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
-### 2. ManiSkill3 설치
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # Linux/Mac
+# or: .venv\Scripts\activate  # Windows
 
-```bash
-pip install mani-skill
-```
+uv pip install mani-skill pygame websockets Pillow
 
-### 3. 추가 의존성 설치
-
-```bash
-pip install pygame websockets Pillow
-```
-
-### 4. AlohaMini 설치
-
-```bash
+# Install AlohaMini
 cd maniskill
 python install.py
 ```
 
-이 스크립트는 자동으로:
-- 에이전트 파일을 ManiSkill에 복사
-- URDF/메시 파일을 `~/.maniskill/data/`에 복사
-- ReplicaCAD 씬 빌더 업데이트
+### Using pip (Alternative)
 
-### 제거
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
+
+# Install dependencies
+pip install mani-skill pygame websockets Pillow
+
+# Install AlohaMini
+cd maniskill
+python install.py
+```
+
+### What install.py does
+
+- Copies agent files to ManiSkill installation
+- Copies URDF/mesh files to `~/.maniskill/data/`
+- Updates ReplicaCAD scene builder
+
+### Uninstall
 
 ```bash
 python install.py --uninstall
@@ -82,45 +92,45 @@ python install.py --uninstall
 
 ## Robot Agent
 
-| Agent | UID | 설명 |
-|-------|-----|------|
-| **AlohaMiniSO100V2** | `aloha_mini_so100_v2` | SO100 암을 사용하는 가상 베이스 로봇 |
+| Agent | UID | Description |
+|-------|-----|-------------|
+| **AlohaMiniSO100V2** | `aloha_mini_so100_v2` | Virtual base robot with SO100 arms |
 
-> **참고**: 가상 베이스(prismatic X/Y + rotation)를 사용하여 안정적인 이동이 가능합니다.
+> **Note**: Uses virtual base (prismatic X/Y + rotation) for stable locomotion.
 
 ## Quick Start
 
-### 키보드 IK 텔레오프 (권장)
+### Keyboard IK Teleoperation (Recommended)
 
 ```bash
 cd maniskill/teleop
 python demo_teleop.py --render
 ```
 
-**컨트롤 (XLeRobot Style)**:
+**Controls (XLeRobot Style)**:
 
-| 왼팔 | 오른팔 | 기능 |
-|------|--------|------|
+| Left Arm | Right Arm | Function |
+|----------|-----------|----------|
 | Q/A | U/J | Shoulder Pan -/+ |
-| W/S | I/K | End-Effector X (전진/후진) |
-| E/D | O/L | End-Effector Y (하강/상승) |
+| W/S | I/K | End-Effector X (forward/back) |
+| E/D | O/L | End-Effector Y (down/up) |
 | R/F | P/; | Pitch -/+ |
 | T/G | [/' | Wrist Roll -/+ |
-| Y/H | ]/\ | Gripper 닫기/열기 |
+| Y/H | ]/\ | Gripper close/open |
 
-| 일반 | 기능 |
-|------|------|
-| SPACE | 암 초기 위치로 리셋 |
-| X/ESC | 종료 |
+| General | Function |
+|---------|----------|
+| SPACE | Reset arms to initial position |
+| X/ESC | Exit |
 
-### VR 텔레오프 (카메라 스트리밍)
+### VR Teleoperation (Camera Streaming)
 
 ```bash
 cd maniskill/teleop
 python demo_vr_teleop_stream.py
 ```
 
-VR 헤드셋 브라우저에서 `https://<your-ip>:8443` 접속
+Access `https://<your-ip>:8443` from VR headset browser.
 
 ## Python API
 
@@ -155,28 +165,28 @@ while True:
 
 ### Action Space (pd_joint_pos)
 
-| Index | Joint | 설명 |
-|-------|-------|------|
-| 0 | base_x | X 속도 (전진/후진) |
-| 1 | base_y | Y 속도 (좌/우) |
-| 2 | base_rot | 회전 속도 |
-| 3 | lift | 리프트 위치 |
-| 4-9 | left_arm | 왼팔 6 조인트 |
-| 10-15 | right_arm | 오른팔 6 조인트 |
+| Index | Joint | Description |
+|-------|-------|-------------|
+| 0 | base_x | X velocity (forward/back) |
+| 1 | base_y | Y velocity (left/right) |
+| 2 | base_rot | Rotation velocity |
+| 3 | lift | Lift position |
+| 4-9 | left_arm | Left arm 6 joints |
+| 10-15 | right_arm | Right arm 6 joints |
 
-**총 16 DOF**
+**Total 16 DOF**
 
 ## Shader Options
 
-| Shader | 설명 | 성능 |
-|--------|------|------|
-| `default` | 기본 래스터라이저 | 빠름 |
-| `rt-fast` | 빠른 레이트레이싱 | 중간 |
-| `rt` | 고품질 레이트레이싱 | 느림 |
+| Shader | Description | Performance |
+|--------|-------------|-------------|
+| `default` | Basic rasterizer | Fast |
+| `rt-fast` | Fast ray tracing | Medium |
+| `rt` | High quality ray tracing | Slow |
 
 ## Troubleshooting
 
-### 검은 화면
+### Black Screen
 
 ```python
 env = gym.make(
@@ -187,15 +197,15 @@ env = gym.make(
 )
 ```
 
-매 스텝마다 `env.render()` 호출 필수.
+Make sure to call `env.render()` every step.
 
-### 키보드 입력이 안됨
+### Keyboard Input Not Working
 
-pygame 윈도우에 포커스를 맞추세요. 데모 스크립트는 자동으로 컨트롤 윈도우를 생성합니다.
+Focus on the pygame window. Demo scripts automatically create a control window.
 
-### ManiSkill import 에러
+### ManiSkill Import Error
 
-`install.py`가 정상적으로 실행되었는지 확인하세요:
+Make sure `install.py` ran successfully:
 ```bash
 python install.py
 ```
@@ -203,5 +213,6 @@ python install.py
 ## References
 
 - [ManiSkill3 Documentation](https://maniskill.readthedocs.io/)
-- [XLeRobot](https://github.com/Vector-Wangel/XLeRobot) - 가상 베이스 구현 참고
+- [UV Package Installer](https://github.com/astral-sh/uv)
+- [XLeRobot](https://github.com/Vector-Wangel/XLeRobot) - Virtual base implementation reference
 - [ReplicaCAD Dataset](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/scenes.html)
