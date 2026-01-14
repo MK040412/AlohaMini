@@ -48,15 +48,15 @@ class AlohaMiniKinematics:
     """
 
     def __init__(self):
-        # URDF joint offsets
-        self.y3 = 0.11238   # joint3 Y offset (positive = forward)
-        self.z3 = 0.02883   # joint3 Z offset (positive = up)
-        self.y4 = -0.13415  # joint4 Y offset (NEGATIVE = backward!)
-        self.z4 = 0.00362   # joint4 Z offset
+        # URDF joint offsets (1.5x extended arms)
+        self.y3 = 0.16857   # joint3 Y offset (positive = forward) - was 0.11238
+        self.z3 = 0.043244  # joint3 Z offset (positive = up) - was 0.02883
+        self.y4 = -0.20122  # joint4 Y offset (NEGATIVE = backward!) - was -0.13415
+        self.z4 = 0.00544   # joint4 Z offset - was 0.00362
 
         # Link lengths from URDF (Y-Z projection)
-        self.l1 = math.sqrt(self.y3**2 + self.z3**2)  # 0.1160m
-        self.l2 = math.sqrt(self.y4**2 + self.z4**2)  # 0.1342m
+        self.l1 = math.sqrt(self.y3**2 + self.z3**2)  # ~0.174m (was 0.116m)
+        self.l2 = math.sqrt(self.y4**2 + self.z4**2)  # ~0.201m (was 0.134m)
 
         # Angle offsets from URDF geometry
         # alpha1: angle of link1 from +Y axis (toward +Z)

@@ -104,11 +104,9 @@ def install():
     print("Installation complete!")
     print("="*50)
     print("\nYou can now use the AlohaMini robot in ManiSkill:")
-    print('  robot_uids="aloha_mini"          # With wheels')
-    print('  robot_uids="aloha_mini_fixed"    # Fixed base')
-    print('  robot_uids="aloha_mini_virtual"  # Virtual mobile base')
+    print('  robot_uids="aloha_mini_so100_v2"  # SO100 V2 robot')
     print("\nExample:")
-    print("  python maniskill/examples/demo_virtual_base.py --render")
+    print("  python maniskill/teleop/demo_teleop.py --render")
 
 
 def uninstall():

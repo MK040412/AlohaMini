@@ -5,11 +5,11 @@ AlohaMini 듀얼 암 모바일 로봇을 ManiSkill3 시뮬레이션 환경에서
 ## Overview
 
 AlohaMini는 다음과 같은 구성을 가진 듀얼 암 모바일 로봇입니다:
-- **모바일 베이스**: 3개의 옴니휠 (omnidirectional wheels)
+- **모바일 베이스**: 가상 prismatic X/Y + rotation 조인트
 - **수직 리프트**: 1 DOF 프리즘매틱 조인트
-- **듀얼 암**: 좌/우 각 6 DOF 매니퓰레이터
+- **듀얼 암**: 좌/우 각 6 DOF SO100 매니퓰레이터
 
-**총 DOF**: 16 (바퀴 3 + 리프트 1 + 좌팔 6 + 우팔 6)
+**총 DOF**: 16 (베이스 3 + 리프트 1 + 좌팔 6 + 우팔 6)
 
 ## Directory Structure
 
@@ -17,37 +17,52 @@ AlohaMini는 다음과 같은 구성을 가진 듀얼 암 모바일 로봇입니
 maniskill/
 ├── agents/aloha_mini/           # 에이전트 클래스 파일
 │   ├── __init__.py
-│   ├── aloha_mini.py            # AlohaMini, AlohaMiniFixed
-│   └── aloha_mini_virtual.py    # AlohaMiniVirtual (가상 베이스)
+│   ├── base_agent.py            # AlohaMiniBaseAgent (추상 클래스)
+│   └── aloha_mini_so100_v2.py   # AlohaMiniSO100V2 (메인 에이전트)
 ├── assets/robots/aloha_mini/    # URDF 및 메시 파일
-│   ├── aloha_mini.urdf
-│   ├── aloha_mini_virtual_base.urdf
-│   └── meshes/                  # STL 메시 파일들
-├── scene_builder/replicacad/    # 수정된 씬 빌더
-│   └── scene_builder.py
+│   ├── maniskill_so100_version.urdf
+│   └── so100_meshes/            # STL/PLY 메시 파일들
+├── teleop/                      # 텔레오프레이션 모듈
+│   ├── demo_teleop.py           # 키보드 IK 텔레오프 (권장)
+│   ├── demo_vr_teleop_stream.py # VR 텔레오프 + 카메라 스트리밍
+│   ├── controller.py            # TeleopController
+│   ├── config.py                # TeleopConfig
+│   ├── inputs/                  # 입력 핸들러 (keyboard, VR)
+│   ├── kinematics/              # IK 모듈
+│   └── web_ui_stream/           # VR 웹 UI
 ├── examples/                    # 예제 스크립트
-│   ├── demo_virtual_base.py     # 가상 베이스 데모 (권장)
 │   ├── demo_ee_keyboard.py      # EE 키보드 컨트롤
 │   └── run_replicacad.py        # ReplicaCAD 환경 실행
+├── scene_builder/replicacad/    # 수정된 씬 빌더
+│   └── scene_builder.py
 ├── install.py                   # 설치 스크립트
+├── setup.py                     # 패키지 설정
 └── README.md
 ```
 
 ## Installation
 
-### 1. ManiSkill3 설치
+### 1. 가상환경 생성
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
+```
+
+### 2. ManiSkill3 설치
 
 ```bash
 pip install mani-skill
 ```
 
-### 2. ReplicaCAD 데이터셋 다운로드
+### 3. 추가 의존성 설치
 
 ```bash
-python -m mani_skill.utils.download_asset ReplicaCAD
+pip install pygame websockets Pillow
 ```
 
-### 3. AlohaMini 설치 (자동)
+### 4. AlohaMini 설치
 
 ```bash
 cd maniskill
@@ -65,42 +80,47 @@ python install.py
 python install.py --uninstall
 ```
 
-## Robot Variants
+## Robot Agent
 
-| Variant | UID | 설명 | 사용 사례 |
-|---------|-----|------|----------|
-| **AlohaMini** | `aloha_mini` | 실제 바퀴 물리 | 바퀴 마찰 연구 |
-| **AlohaMiniFixed** | `aloha_mini_fixed` | 고정 베이스 | 조작 작업만 |
-| **AlohaMiniVirtual** | `aloha_mini_virtual` | 가상 모바일 베이스 **(권장)** | 네비게이션 + 조작 |
+| Agent | UID | 설명 |
+|-------|-----|------|
+| **AlohaMiniSO100V2** | `aloha_mini_so100_v2` | SO100 암을 사용하는 가상 베이스 로봇 |
 
-> **권장**: `aloha_mini_virtual`을 사용하세요. XLeRobot과 동일한 방식으로 prismatic X/Y + rotation 조인트를 사용하여 안정적인 이동이 가능합니다.
+> **참고**: 가상 베이스(prismatic X/Y + rotation)를 사용하여 안정적인 이동이 가능합니다.
 
 ## Quick Start
 
-### 가상 베이스 데모 (권장)
+### 키보드 IK 텔레오프 (권장)
 
 ```bash
-cd maniskill/examples
-python demo_virtual_base.py --render
+cd maniskill/teleop
+python demo_teleop.py --render
 ```
 
-**컨트롤 (FPS Style)**:
-- `W/S`: 전진/후진
-- `A/D`: 좌/우 이동 (strafe)
-- `Q/E`: 좌/우 회전
-- `R/F`: 리프트 업/다운
+**컨트롤 (XLeRobot Style)**:
 
-### EE 키보드 컨트롤
+| 왼팔 | 오른팔 | 기능 |
+|------|--------|------|
+| Q/A | U/J | Shoulder Pan -/+ |
+| W/S | I/K | End-Effector X (전진/후진) |
+| E/D | O/L | End-Effector Y (하강/상승) |
+| R/F | P/; | Pitch -/+ |
+| T/G | [/' | Wrist Roll -/+ |
+| Y/H | ]/\ | Gripper 닫기/열기 |
+
+| 일반 | 기능 |
+|------|------|
+| SPACE | 암 초기 위치로 리셋 |
+| X/ESC | 종료 |
+
+### VR 텔레오프 (카메라 스트리밍)
 
 ```bash
-python demo_ee_keyboard.py --render
+cd maniskill/teleop
+python demo_vr_teleop_stream.py
 ```
 
-### ReplicaCAD 환경
-
-```bash
-python run_replicacad.py --render --control keyboard
-```
+VR 헤드셋 브라우저에서 `https://<your-ip>:8443` 접속
 
 ## Python API
 
@@ -108,17 +128,19 @@ python run_replicacad.py --render --control keyboard
 import gymnasium as gym
 import mani_skill.envs
 
-# 가상 베이스 로봇 사용 (권장)
+# Import agent to register
+from mani_skill.agents.robots import aloha_mini
+
+# Create environment
 env = gym.make(
     "ReplicaCAD_SceneManipulation-v1",
-    robot_uids="aloha_mini_virtual",
+    robot_uids="aloha_mini_so100_v2",
     render_mode="human",
     sim_backend="gpu",
     control_mode="pd_joint_pos",
     sensor_configs=dict(shader_pack="rt-fast"),
     human_render_camera_configs=dict(shader_pack="rt-fast"),
     enable_shadow=True,
-    max_episode_steps=None,  # 무한 에피소드
 )
 
 obs, info = env.reset(options=dict(reconfigure=True))
@@ -131,22 +153,18 @@ while True:
 
 ## Controllers
 
-### AlohaMiniVirtual (권장)
+### Action Space (pd_joint_pos)
 
-| Mode | Action Space | 설명 |
-|------|--------------|------|
-| `pd_joint_pos` | `[base(3), lift(1), left_arm(6), right_arm(6)]` = 16 DOF | 베이스 속도 + 암 위치 |
+| Index | Joint | 설명 |
+|-------|-------|------|
+| 0 | base_x | X 속도 (전진/후진) |
+| 1 | base_y | Y 속도 (좌/우) |
+| 2 | base_rot | 회전 속도 |
+| 3 | lift | 리프트 위치 |
+| 4-9 | left_arm | 왼팔 6 조인트 |
+| 10-15 | right_arm | 오른팔 6 조인트 |
 
-- `base[0]`: X 속도 (전진/후진)
-- `base[1]`: Y 속도 (좌/우)
-- `base[2]`: 회전 속도
-
-### AlohaMini (실제 바퀴)
-
-| Mode | Action Space | 설명 |
-|------|--------------|------|
-| `mobile_pd_joint_pos` | `[wheels(3), lift(1), left_arm(6), right_arm(6)]` = 16 DOF | 바퀴 속도 제어 |
-| `pd_joint_pos` | `[lift(1), left_arm(6), right_arm(6)]` = 13 DOF | 고정 베이스 |
+**총 16 DOF**
 
 ## Shader Options
 
@@ -157,13 +175,6 @@ while True:
 | `rt` | 고품질 레이트레이싱 | 느림 |
 
 ## Troubleshooting
-
-### 바퀴가 굴러가지만 로봇이 안 움직임
-
-`aloha_mini_virtual` 로봇을 사용하세요:
-```python
-robot_uids="aloha_mini_virtual"
-```
 
 ### 검은 화면
 
@@ -181,6 +192,13 @@ env = gym.make(
 ### 키보드 입력이 안됨
 
 pygame 윈도우에 포커스를 맞추세요. 데모 스크립트는 자동으로 컨트롤 윈도우를 생성합니다.
+
+### ManiSkill import 에러
+
+`install.py`가 정상적으로 실행되었는지 확인하세요:
+```bash
+python install.py
+```
 
 ## References
 

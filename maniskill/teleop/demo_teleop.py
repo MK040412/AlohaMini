@@ -41,6 +41,8 @@ try:
     import gymnasium as gym
     import mani_skill.envs
     import sapien
+    # Import agents to ensure they are registered
+    from mani_skill.agents.robots import aloha_mini
 except ImportError:
     print("Error: ManiSkill3 not installed. Install with: pip install mani-skill")
     sys.exit(1)
@@ -54,6 +56,9 @@ except ImportError:
 # Add parent directory to path for imports
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import agents to ensure they are registered
+from agents.aloha_mini import AlohaMiniSO100V2
 
 from teleop.controller import TeleopController
 from teleop.config import TeleopConfig
@@ -147,8 +152,8 @@ def main():
     parser.add_argument("--render", action="store_true", help="Enable rendering")
     parser.add_argument("--shader", choices=["default", "rt", "rt-fast"], default="default")
     parser.add_argument("--sim-backend", choices=["cpu", "gpu"], default="gpu")
-    parser.add_argument("--robot", choices=["aloha_mini", "aloha_mini_virtual", "aloha_mini_fixed"],
-                        default="aloha_mini_virtual", help="Robot variant")
+    parser.add_argument("--robot", choices=["aloha_mini_so100_v2"],
+                        default="aloha_mini_so100_v2", help="Robot variant")
     args = parser.parse_args()
 
     pygame.init()
@@ -199,7 +204,7 @@ def main():
 
     # Create teleop controller
     config = TeleopConfig()
-    teleop = TeleopController(config)
+    teleop = TeleopController(config, robot_variant=args.robot)
 
     # Print help
     print(teleop.get_help_text())
@@ -261,6 +266,7 @@ def main():
 
         # Controls help (compact)
         controls = [
+            "BASE: 8/5=Fwd/Back  4/6=Strafe  7/9=Rotate  PgUp/Dn=Lift",
             "LEFT: Q/A=J1  W/S=X  E/D=Y  R/F=pitch  T/G=roll  Y/H=grip",
             "RIGHT: U/J=J1  I/K=X  O/L=Y  P/;=pitch  [/'=roll  ]/\\=grip",
             "SPACE=Reset  X/ESC=Exit",
@@ -331,8 +337,15 @@ def main():
         y_pos += 25
 
         # Workspace info
-        limits = teleop.kinematics.workspace_limits
-        text = font.render(f"Workspace: r_min={limits['r_min']:.4f}  r_max={limits['r_max']:.4f}", True, (150, 150, 150))
+        if hasattr(teleop.kinematics, 'workspace_limits'):
+            limits = teleop.kinematics.workspace_limits
+            r_min = limits['r_min']
+            r_max = limits['r_max']
+        else:
+            # SO100Kinematics: compute from l1, l2
+            r_min = abs(teleop.kinematics.l1 - teleop.kinematics.l2)
+            r_max = teleop.kinematics.l1 + teleop.kinematics.l2
+        text = font.render(f"Workspace: r_min={r_min:.4f}  r_max={r_max:.4f}", True, (150, 150, 150))
         screen.blit(text, (10, y_pos))
         y_pos += 25
 

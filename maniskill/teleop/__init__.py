@@ -30,7 +30,6 @@ Usage:
 """
 
 from .kinematics.aloha_mini_kinematics import AlohaMiniKinematics
-from .kinematics.so101_kinematics import SO101Kinematics  # Legacy
 from .inputs.base import ControlGoal, ControlMode, BaseInputProvider, ArmState
 from .inputs.keyboard_controller import KeyboardController, KeyboardConfig
 from .config import TeleopConfig
@@ -48,7 +47,6 @@ except ImportError:
 __all__ = [
     # Kinematics
     "AlohaMiniKinematics",
-    "SO101Kinematics",  # Legacy
     # Input types
     "ControlGoal",
     "ControlMode",

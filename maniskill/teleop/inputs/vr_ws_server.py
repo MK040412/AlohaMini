@@ -98,8 +98,8 @@ class VRControllerState:
     """
     State tracking for a VR controller.
 
-    Uses delta-based control (Vector Wang style):
-    - Tracks previous VR position for frame-by-frame delta calculation
+    Uses XLeRobot-style control:
+    - Tracks VR origin position for relative control
     - Accumulates robot state (ee_x, ee_y, joint1) across frames
     - Delta limiting prevents sudden movements
     """
@@ -109,8 +109,9 @@ class VRControllerState:
         self.grip_active = False
         self.trigger_active = False
 
-        # Delta-based position tracking (Vector Wang style)
+        # XLeRobot-style position tracking
         self.prev_vr_position: Optional[np.ndarray] = None
+        self.vr_origin: Optional[np.ndarray] = None  # VR position when grip started
 
         # Accumulated robot state (persistent across frames)
         # NOTE: These are initial fallback values. They should be overwritten by
@@ -122,21 +123,28 @@ class VRControllerState:
         self.current_pitch: float = 0.0
         self.current_wrist_roll: float = 0.0
 
+        # Initial values (saved when grip started)
+        self.initial_ee_x: float = -0.0218
+        self.initial_ee_y: float = 0.0324
+
         # Delta-based wrist tracking
         self.prev_wrist_roll: Optional[float] = None
         self.prev_wrist_flex: Optional[float] = None
 
-        # Quaternion-based rotation tracking (for computing wrist deltas)
+        # Quaternion-based rotation tracking
         self.prev_quaternion: Optional[np.ndarray] = None
+        self.origin_quaternion: Optional[np.ndarray] = None  # Quaternion when grip started
 
     def reset(self):
         """Reset controller state."""
         self.grip_active = False
         self.prev_vr_position = None
+        self.vr_origin = None
         # Don't reset current_ee_x/y/joint1 - keep accumulated state
         self.prev_wrist_roll = None
         self.prev_wrist_flex = None
         self.prev_quaternion = None
+        self.origin_quaternion = None
 
     def initialize_from_arm(self, arm):
         """Initialize accumulated state from current arm state."""
@@ -145,6 +153,9 @@ class VRControllerState:
         self.current_joint1_deg = arm.joint1_deg
         self.current_pitch = arm.pitch
         self.current_wrist_roll = arm.joint5_deg
+        # Save initial values for relative control
+        self.initial_ee_x = arm.ee_x
+        self.initial_ee_y = arm.ee_y
 
 
 class VRWebSocketServer(BaseInputProvider):
@@ -453,9 +464,9 @@ class VRWebSocketServer(BaseInputProvider):
                     controller.current_wrist_roll += roll_delta
                     controller.current_pitch += pitch_delta
 
-                    # Clamp wrist angles
-                    controller.current_wrist_roll = np.clip(controller.current_wrist_roll, -90.0, 90.0)
-                    controller.current_pitch = np.clip(controller.current_pitch, -90.0, 90.0)
+                    # No limits - allow full rotation
+                    # controller.current_wrist_roll = np.clip(controller.current_wrist_roll, -180.0, 180.0)
+                    # controller.current_pitch = np.clip(controller.current_pitch, -180.0, 180.0)
 
                     wrist_roll_deg = controller.current_wrist_roll
                     pitch_deg = controller.current_pitch
