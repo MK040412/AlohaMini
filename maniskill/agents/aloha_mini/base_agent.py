@@ -20,8 +20,9 @@ from mani_skill.utils.structs.link import Link
 from scipy.spatial.transform import Rotation as R
 
 
-# Collision bit for AlohaMini robots
+# Collision bits for AlohaMini robots
 ALOHA_MINI_BASE_COLLISION_BIT = 29
+ALOHA_MINI_WHEELS_COLLISION_BIT = 30
 
 
 def euler_to_quat_xyz(rx, ry, rz):
