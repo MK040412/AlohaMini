@@ -36,30 +36,37 @@ maniskill/
 ├── scene_builder/replicacad/    # Modified scene builder
 │   └── scene_builder.py
 ├── install.py                   # Installation script
-├── setup.py                     # Package setup
+├── pyproject.toml               # Package configuration
 └── README.md
 ```
 
 ## Installation
 
-### Using UV (Recommended - Faster)
+### Using UV (Recommended)
 
-[UV](https://github.com/astral-sh/uv) is a fast Python package installer.
+[UV](https://github.com/astral-sh/uv) is a fast Python package installer and resolver.
 
 ```bash
 # Install UV (if not installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Create virtual environment and install dependencies
+# Navigate to maniskill directory
+cd maniskill
+
+# Create virtual environment
 uv venv
 source .venv/bin/activate  # Linux/Mac
 # or: .venv\Scripts\activate  # Windows
 
-uv pip install mani-skill pygame websockets Pillow
+# Install dependencies
+# IMPORTANT: Package name is 'mani-skill' (with HYPHEN), NOT 'mani_skill'
+uv pip install mani-skill pygame websockets Pillow scipy
 
-# Install AlohaMini
-cd maniskill
+# Install AlohaMini agent
 python install.py
+
+# Verify installation
+python install.py --check
 ```
 
 ### Using pip (Alternative)
@@ -71,24 +78,33 @@ source venv/bin/activate  # Linux/Mac
 # or: venv\Scripts\activate  # Windows
 
 # Install dependencies
-pip install mani-skill pygame websockets Pillow
+# IMPORTANT: Package name is 'mani-skill' (with HYPHEN), NOT 'mani_skill'
+pip install mani-skill pygame websockets Pillow scipy
 
-# Install AlohaMini
+# Install AlohaMini agent
 cd maniskill
 python install.py
+
+# Verify installation
+python install.py --check
 ```
+
+### install.py Options
+
+| Option | Description |
+|--------|-------------|
+| `python install.py` | Install AlohaMini into ManiSkill |
+| `python install.py --check` | Verify installation status |
+| `python install.py --uninstall` | Remove AlohaMini from ManiSkill |
+| `python install.py --help` | Show help message |
 
 ### What install.py does
 
-- Copies agent files to ManiSkill installation
-- Copies URDF/mesh files to `~/.maniskill/data/`
-- Updates ReplicaCAD scene builder
-
-### Uninstall
-
-```bash
-python install.py --uninstall
-```
+1. Detects virtual environment (supports uv and standard venv)
+2. Copies agent files to ManiSkill installation (`mani_skill/agents/robots/aloha_mini/`)
+3. Copies URDF/mesh files to `~/.maniskill/data/robots/aloha_mini/`
+4. Updates ReplicaCAD scene builder
+5. Registers agent in ManiSkill
 
 ## Robot Agent
 
@@ -186,6 +202,18 @@ while True:
 
 ## Troubleshooting
 
+### Package Name Error
+
+**Wrong**: `uv pip install mani_skill` (underscore)
+**Correct**: `uv pip install mani-skill` (hyphen)
+
+### ManiSkill Not Found
+
+Make sure:
+1. Virtual environment is activated (`source .venv/bin/activate`)
+2. ManiSkill is installed with correct name (`uv pip install mani-skill`)
+3. Run `python install.py --check` to diagnose issues
+
 ### Black Screen
 
 ```python
@@ -208,6 +236,25 @@ Focus on the pygame window. Demo scripts automatically create a control window.
 Make sure `install.py` ran successfully:
 ```bash
 python install.py
+python install.py --check
+```
+
+## Verification
+
+After installation, verify everything works:
+
+```bash
+# 1. Check installation status
+python install.py --check
+
+# 2. Test import
+python -c "from mani_skill.agents.robots.aloha_mini import AlohaMiniSO100V2; print('Success!')"
+
+# 3. Check asset files
+ls ~/.maniskill/data/robots/aloha_mini/
+
+# 4. Run demo (optional)
+cd teleop && python demo_teleop.py --render
 ```
 
 ## References
