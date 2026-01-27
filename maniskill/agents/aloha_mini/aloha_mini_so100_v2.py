@@ -15,6 +15,7 @@ import numpy as np
 import sapien
 import torch
 
+from mani_skill import ASSET_DIR
 from mani_skill.agents.base_agent import Keyframe
 from mani_skill.agents.controllers import *
 from mani_skill.agents.registration import register_agent
@@ -23,8 +24,6 @@ from mani_skill.utils import common, sapien_utils
 from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
-
-from pathlib import Path
 
 from .base_agent import AlohaMiniBaseAgent, euler_to_quat_xyz
 
@@ -49,7 +48,8 @@ class AlohaMiniSO100V2(AlohaMiniBaseAgent):
     """
 
     uid = "aloha_mini_so100_v2"
-    urdf_path = str(Path(__file__).parent.parent.parent / "assets/robots/aloha_mini/maniskill_so100_version.urdf")
+    # URDF is installed to ~/.maniskill/data/robots/aloha_mini/ by install.py
+    urdf_path = f"{ASSET_DIR}/robots/aloha_mini/maniskill_so100_version.urdf"
 
     urdf_config = dict(
         _materials=dict(
