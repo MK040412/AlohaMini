@@ -196,25 +196,14 @@ class CameraStreamServer:
             )
             logger.info(f"Lift DOWN: {self.teleop.lift_position:.3f}")
 
-        # --- TRIGGER: Gripper control (toggle: close when open, open when closed) ---
-        # When trigger is pressed:
-        #   - If gripper is open/partially open: gradually close
-        #   - If gripper is fully closed: gradually open
-        if trigger > 0.1:
-            gripper_delta = trigger * 3.0  # Trigger strength → movement speed
+        # --- TRIGGER: Gripper aperture (analog squeeze: full trigger = closed) ---
+        # Map the trigger value directly to the parallel-gripper aperture in meters
+        # (0=closed, 0.042=open). Direct mapping avoids the chatter a hold-to-toggle
+        # scheme produces near the closed limit.
+        if trigger is not None:
             arm = self.teleop.left_arm if hand == 'left' else self.teleop.right_arm
-
-            gripper_closed_threshold = -85.0  # Consider "fully closed" below this
-            gripper_open_max = 45.0  # Maximum open position
-
-            if arm.joint6_deg <= gripper_closed_threshold:
-                # Gripper is fully closed → open it
-                arm.joint6_deg += gripper_delta
-                arm.joint6_deg = min(gripper_open_max, arm.joint6_deg)
-            else:
-                # Gripper is open/partially open → close it
-                arm.joint6_deg -= gripper_delta
-                arm.joint6_deg = max(-90.0, arm.joint6_deg)
+            t = max(0.0, min(1.0, float(trigger)))
+            arm.gripper_pos_m = 0.037 * (1.0 - t)
 
         # --- GRIP + POSITION: Arm tracking (delta-based control) ---
         if grip_active and position and all(k in position for k in ['x', 'y', 'z']):

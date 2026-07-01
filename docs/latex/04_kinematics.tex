@@ -1,0 +1,736 @@
+% 04_kinematics.tex - Kinematics Module
+% AlohaMini Codebase Documentation
+
+\section{Kinematics Module}
+
+% ============================================
+% SLIDE: Module Overview
+% ============================================
+\begin{frame}{kinematics/ Module Overview}
+\begin{columns}
+\begin{column}{0.4\textwidth}
+    \textbf{Purpose:} IK/FK solvers for arm control
+
+    \vspace{0.2cm}
+
+    \textbf{Files:}
+    \begin{itemize}
+        \item \filepath{aloha\_mini\_kinematics.py}
+        \item \filepath{so100\_kinematics*.py}
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \textbf{Features:} 2-link planar IK, Law of Cosines, workspace clamping
+\end{column}
+\begin{column}{0.6\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.65, transform shape]
+        % Base interface
+        \node[class, text width=3.2cm] (base) at (0,0) {\textbf{Kinematics}};
+
+        % Implementations
+        \node[class, text width=2.2cm, below left=1cm and 0.2cm of base] (aloha) {AlohaMini};
+        \node[class, text width=2.2cm, below=1cm of base] (so100) {SO100};
+        \node[class, text width=2.2cm, below right=1cm and 0.2cm of base] (so100v2) {SO100V2};
+
+        % Arrows
+        \draw[arrow] (aloha.north) -- (base.south west);
+        \draw[arrow] (so100.north) -- (base.south);
+        \draw[arrow] (so100v2.north) -- (base.south east);
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: 2-Link Planar IK Theory
+% ============================================
+\begin{frame}{2-Link Planar IK - Theory}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.95, transform shape]
+        % Coordinate axes
+        \draw[->] (0,0) -- (3.5,0) node[right] {\scriptsize Y};
+        \draw[->] (0,0) -- (0,3) node[above] {\scriptsize Z};
+
+        % Shoulder joint (origin)
+        \node[joint] (shoulder) at (0,0) {};
+        \node[below left] at (shoulder) {\footnotesize Shoulder};
+
+        % Link 1
+        \draw[link] (0,0) -- (1.5,2);
+        \node[joint] (elbow) at (1.5,2) {};
+        \node[above left] at (elbow) {\footnotesize Elbow};
+
+        % Link 2
+        \draw[link] (1.5,2) -- (3,1.5);
+        \node[joint] (wrist) at (3,1.5) {};
+        \node[right] at (wrist) {\footnotesize Wrist (EE)};
+
+        % theta1: angle of L1 from +Y axis
+        \draw[dashed, gray] (0,0) -- (1.5,0);
+        \draw[->, blue, thick] (0.6,0) arc (0:53:0.6);
+        \node[blue] at (0.95,0.4) {\small $\theta_1$};
+
+        % theta2: exterior angle at elbow
+        \draw[dashed, gray] (1.5,2) -- (3,2);
+        \draw[->, red, thick] (2.1,2) arc (0:-18:0.6);
+        \node[red] at (2.4,1.7) {\small $\theta_2$};
+
+        % phi: interior elbow angle (between L1 and L2)
+        \draw[->, purple, thick] (1.1,1.7) arc (233:290:0.5);
+        \node[purple, font=\scriptsize] at (1.5,1.35) {$\phi$};
+
+        % Link labels
+        \node[above left, font=\footnotesize] at (0.75,1) {$L_1$};
+        \node[above right, font=\footnotesize] at (2.25,1.75) {$L_2$};
+
+        % Target line r
+        \draw[dashed, green!50!black] (0,0) -- (3,1.5);
+        \node[green!50!black, font=\footnotesize] at (1.8,0.45) {$r$};
+
+        % gamma: angle to target from +Y axis
+        \draw[->, green!50!black] (0.8,0) arc (0:27:0.8);
+        \node[green!50!black, font=\footnotesize] at (1.1,0.15) {$\gamma$};
+
+        % psi: angle between r and L1 (shoulder offset)
+        \draw[->, orange, thick] (0.75,0.35) arc (27:53:0.8);
+        \node[orange, font=\scriptsize] at (0.5,0.7) {$\psi$};
+    \end{tikzpicture}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Law of Cosines:}
+    \vspace{0.1cm}
+
+    {\small Distance:} $r = \sqrt{y^2 + z^2}$
+
+    \vspace{0.1cm}
+
+    {\small Interior elbow angle ($\phi$):}
+    \[\cos\phi = \frac{L_1^2 + L_2^2 - r^2}{2 L_1 L_2}\]
+
+    {\small Shoulder offset ($\psi$):}
+    \[\cos\psi = \frac{r^2 + L_1^2 - L_2^2}{2 r L_1}\]
+
+    {\small Joint angles (elbow-up):}
+    \[\theta_1 = \gamma - \psi\]
+    \[\theta_2 = \theta_1 + (\pi - \phi)\]
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: AlohaMiniKinematics - Code
+% ============================================
+\begin{frame}[fragile,shrink=5]{AlohaMiniKinematics - URDF Parameters}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+# URDF Joint Chain (Left Arm):
+# left_joint2: xyz=[-0.017, -0.031, 0.054]
+# left_joint3: xyz=[0.003, 0.169, 0.043]
+# left_joint4: xyz=[0.000, -0.201, 0.005]
+
+class AlohaMiniKinematics:
+    def __init__(self):
+        # 1.5x extended arm lengths
+        self.y3 = 0.16857   # joint3 Y offset
+        self.z3 = 0.043244  # joint3 Z offset
+        self.y4 = -0.20122  # joint4 Y (NEGATIVE!)
+        self.z4 = 0.00544   # joint4 Z offset
+
+        # Link lengths from URDF (Pythagorean)
+        self.l1 = sqrt(y3^2 + z3^2)  # ~0.174m
+        self.l2 = sqrt(y4^2 + z4^2)  # ~0.201m
+
+        # Geometry angles (measured from +Y axis)
+        self.alpha1 = atan2(z3, y3)  # ~14.4 deg
+        self.alpha2 = atan2(z4, y4)  # ~178.5 deg
+\end{lstlisting}
+
+\vspace{0.15cm}
+
+\begin{block}{Home Position}
+At $j_2=0$, $j_3=0$: Wrist at $y=-0.022m$, $z=0.032m$ (Verified: 0.0mm error)
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: AlohaMiniKinematics - FK
+% ============================================
+\begin{frame}[fragile]{AlohaMiniKinematics - Forward Kinematics}
+\begin{lstlisting}
+def forward_kinematics(self, j2_deg: float, j3_deg: float) -> Tuple[float, float]:
+    """Compute wrist position at joint4."""
+    j2 = math.radians(j2_deg)
+    j3 = math.radians(j3_deg)
+
+    # Absolute angle of link1 (upper arm) in Y-Z plane
+    # When j2=0, link1 points at angle alpha1 from +Y axis
+    theta1 = j2 + self.alpha1
+
+    # Absolute angle of link2 (forearm) in Y-Z plane
+    # j2 rotates the whole arm, j3 rotates link2 relative to link1
+    # alpha2 accounts for the backward-pointing geometry (~178.45 deg)
+    theta2 = j2 + j3 + self.alpha2
+
+    # FK: position of j4 relative to j2 in Y-Z plane
+    y = self.l1 * math.cos(theta1) + self.l2 * math.cos(theta2)
+    z = self.l1 * math.sin(theta1) + self.l2 * math.sin(theta2)
+
+    return y, z
+\end{lstlisting}
+
+\begin{block}{Key Insight}
+The $\alpha_2 \approx 178.45°$ offset encodes that the forearm points \textbf{backward} in link3's frame. This is why the arm is folded (not extended) at home position.
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: AlohaMiniKinematics - IK
+% ============================================
+\begin{frame}[fragile]{AlohaMiniKinematics - Inverse Kinematics}
+\begin{lstlisting}
+def inverse_kinematics(self, y_target: float, z_target: float) -> Tuple[float, float]:
+    # Distance from shoulder to target
+    r = math.sqrt(y_target**2 + z_target**2)
+
+    # Clamp to workspace
+    r_max = self.l1 + self.l2
+    r_min = abs(self.l1 - self.l2)
+    # ... clamping logic ...
+
+    # Angle to target from +Y axis
+    gamma = math.atan2(z_target, y_target)
+
+    # Law of cosines for elbow
+    cos_alpha = (r**2 + self.l1**2 - self.l2**2) / (2 * self.l1 * r)
+    alpha = math.acos(cos_alpha)
+
+    # Two solutions: theta1 = gamma +/- alpha
+    theta1_a = gamma - alpha  # elbow-up
+    theta1_b = gamma + alpha  # elbow-down
+
+    # Interior elbow angle
+    cos_phi = (self.l1**2 + self.l2**2 - r**2) / (2 * self.l1 * self.l2)
+    phi = math.acos(cos_phi)
+
+    # theta2 = theta1 + (pi - phi)  [exterior angle relationship]
+    # ... solve and verify with FK ...
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: SO100Kinematics
+% ============================================
+\begin{frame}[fragile]{SO100Kinematics - XLeRobot Style}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\begin{lstlisting}
+class SO100Kinematics:
+    """XLeRobot-style kinematics."""
+
+    def __init__(self):
+        # Link lengths from URDF
+        self.l1 = 0.1159  # shoulder-elbow
+        self.l2 = 0.1350  # elbow-wrist
+
+        # URDF geometry offsets
+        self.theta1_offset = atan2(0.028, 0.11257)
+        self.theta2_offset = (
+            atan2(0.0052, 0.1349) +
+            self.theta1_offset
+        )
+
+        # Initial EE position
+        self.initial_ee_x = 0.162
+        self.initial_ee_y = 0.118
+\end{lstlisting}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{URDF Joint Offsets:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{lr}
+    \toprule
+    \textbf{Joint} & \textbf{Offset (XYZ)} \\
+    \midrule
+    shoulder\_pan & (0, -0.045, 0.017) \\
+    shoulder\_lift & (0, 0.103, 0.031) \\
+    elbow\_flex & (0, 0.113, 0.028) \\
+    wrist\_flex & (0, 0.005, 0.135) \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    \vspace{0.3cm}
+
+    \textbf{Joint Limits:}
+    \begin{itemize}
+        \item shoulder\_pan: $\pm 114°$
+        \item shoulder\_lift: $-6°$ to $198°$
+        \item elbow\_flex: $-11°$ to $180°$
+        \item wrist\_flex: $\pm 103°$
+    \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: SO100Kinematics - IK
+% ============================================
+\begin{frame}[fragile]{SO100Kinematics - IK with Pitch Compensation}
+\begin{lstlisting}
+def inverse_kinematics(self, x: float, y: float, pitch: float = 0.0):
+    r = math.sqrt(x**2 + y**2)
+
+    # Workspace clamping
+    r_max = self.l1 + self.l2
+    r_min = abs(self.l1 - self.l2)
+    # ... scale if out of bounds ...
+
+    # Law of cosines (NOTE: negative sign is critical!)
+    cos_theta2 = -(r**2 - self.l1**2 - self.l2**2) / (2 * self.l1 * self.l2)
+    theta2 = math.pi - math.acos(cos_theta2)
+
+    # Shoulder angle using geometric approach
+    beta = math.atan2(y, x)
+    gamma = math.atan2(self.l2 * sin(theta2), self.l1 + self.l2 * cos(theta2))
+    theta1 = beta + gamma
+
+    # Convert to URDF joint angles (add offsets)
+    joint2 = theta1 + self.theta1_offset  # shoulder_lift
+    joint3 = theta2 + self.theta2_offset  # elbow_flex
+
+    # Wrist flex for pitch compensation
+    wrist_flex = joint2 - joint3 + pitch
+    return joint2, joint3, wrist_flex
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: SO100KinematicsV2
+% ============================================
+\begin{frame}{SO100KinematicsV2 - V2 URDF Structure}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{V2 URDF Differences:}
+    \begin{itemize}
+        \item shoulder\_pan: 90° X rotation
+        \item Transforms coordinates:
+        \begin{itemize}
+            \item Arm local Y $\rightarrow$ World Z (up)
+            \item Arm local Z $\rightarrow$ World -Y (forward)
+        \end{itemize}
+        \item Uses TCP position directly
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{User Coordinates:}
+    \begin{itemize}
+        \item \code{ee\_x} = forward distance
+        \item \code{ee\_y} = height (up)
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{TCP at Home:}
+    \begin{itemize}
+        \item $x = 0.386m$ (forward)
+        \item $y = 0.267m$ (up)
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.9, transform shape]
+        % World frame
+        \draw[->, thick] (0,0) -- (2.2,0) node[right] {\small -Y};
+        \draw[->, thick] (0,0) -- (0,2.2) node[above] {\small Z};
+        \node[below left, font=\scriptsize] at (0,0) {World};
+        \node[font=\tiny, gray] at (1.1,-0.3) {(forward)};
+        \node[font=\tiny, gray] at (-0.3,1.1) {(up)};
+
+        % Arm frame (rotated)
+        \draw[->, blue, thick] (3.5,0) -- (5.7,0) node[right] {\small Z};
+        \draw[->, blue, thick] (3.5,0) -- (3.5,2.2) node[above] {\small Y};
+        \node[below left, blue, font=\scriptsize] at (3.5,0) {Arm};
+        \node[font=\tiny, blue] at (4.6,-0.3) {(forward)};
+        \node[font=\tiny, blue] at (3.2,1.1) {(up)};
+
+        % Transform arrow with curved path
+        \draw[->, thick, green!50!black, dashed, rounded corners=5pt]
+            (1.8,1.3) -- (2.5,1.5) -- (3.2,1.3);
+        \node[above, green!50!black, font=\footnotesize] at (2.5,1.6) {90° X rot};
+
+        % TCP position with coordinates
+        \node[joint, fill=orange!50] at (5,1.8) {};
+        \node[right, font=\scriptsize] at (5.1,1.8) {TCP};
+        \draw[dashed, orange] (3.5,0) -- (5,1.8);
+        \node[font=\tiny, orange] at (4.8,0.8) {(0.386, 0.267)};
+    \end{tikzpicture}
+
+    \vspace{0.4cm}
+
+    \begin{block}{Offset Parameters}
+    \code{offset\_x = 0.223m}\\
+    \code{offset\_y = 0.150m}\\
+    (Accounts for base, shoulder, gripper)
+    \end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: SO100KinematicsV2 - FK/IK
+% ============================================
+\begin{frame}[fragile]{SO100KinematicsV2 - Consistent FK/IK}
+\begin{lstlisting}
+def forward_kinematics(self, j2: float, j3: float) -> Tuple[float, float]:
+    # Absolute angles in arm's Y-Z plane (from +Y toward +Z)
+    theta1 = j2 + self.alpha1  # Link 1 angle
+    theta2 = j2 + j3 + self.alpha2  # Link 2 angle
+
+    # Wrist position (Y=up, Z=forward in arm frame)
+    wrist_y = self.l1 * cos(theta1) + self.l2 * cos(theta2)
+    wrist_z = self.l1 * sin(theta1) + self.l2 * sin(theta2)
+
+    # Transform to user coordinates
+    ee_x = wrist_z + self.offset_x  # forward
+    ee_y = wrist_y + self.offset_y  # up
+    return ee_x, ee_y
+
+def inverse_kinematics(self, x: float, y: float, pitch: float = 0.0):
+    # Transform TCP to wrist position
+    wrist_z = x - self.offset_x
+    wrist_y = y - self.offset_y
+    # ... law of cosines solution (same as AlohaMiniKinematics) ...
+    # Convert: j2 = theta1 - alpha1, j3 = theta2 - theta1 + alpha1 - alpha2
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: Verification Results
+% ============================================
+\begin{frame}[shrink=5]{Kinematics Verification Results}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{AlohaMiniKinematics:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{lr}
+    \toprule
+    \textbf{Test} & \textbf{Result} \\
+    \midrule
+    FK at home & 0.0mm error \\
+    IK round-trip & 0.0mm error \\
+    Joint tracking & 0.0° error \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    \vspace{0.2cm}
+
+    \begin{alertblock}{Warning in Code}
+    \scriptsize
+    ``DO NOT MODIFY THIS IK/FK CODE''\\
+    ``Verified working perfectly: 2024-12-31''
+    \end{alertblock}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{SO100KinematicsV2:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{lr}
+    \toprule
+    \textbf{Test} & \textbf{Result} \\
+    \midrule
+    FK at home & 0.0mm error \\
+    IK at home & $\sim$0° joint error \\
+    Position round-trip & $<$1mm error \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    \vspace{0.2cm}
+
+    \textbf{Test Cases:}
+    \begin{itemize}
+        \item Joint angles: 10 test cases
+        \item Position targets: 8 test cases
+        \item All pass with $<$1mm error
+    \end{itemize}
+\end{column}
+\end{columns}
+
+\vspace{0.2cm}
+
+\begin{block}{Key Insight}
+\small Mathematical consistency between FK and IK is critical. Both must use the same geometry angles ($\alpha_1$, $\alpha_2$) and coordinate transformations.
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: Workspace Visualization
+% ============================================
+\begin{frame}{Workspace Visualization}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=1.0, transform shape]
+        % Coordinate axes
+        \draw[->, thick] (-2.2,0) -- (2.2,0) node[right] {Y (m)};
+        \draw[->, thick] (0,-0.3) -- (0,2.5) node[above] {Z (m)};
+
+        % Grid lines (light)
+        \foreach \x in {-2,-1,1,2} {
+            \draw[gray!30, thin] (\x,-0.2) -- (\x,2.3);
+        }
+        \foreach \y in {0.5,1,1.5,2} {
+            \draw[gray!30, thin] (-2,\y) -- (2,\y);
+        }
+
+        % Workspace annulus (upper half only - arm operates in Y-Z plane)
+        \fill[green!15] (0,0) -- (1.9,0) arc (0:180:1.9) -- cycle;
+        \fill[white] (0,0) -- (0.14,0) arc (0:180:0.14) -- cycle;
+
+        % Boundary circles
+        \draw[green!50!black, thick] (0,0) ++(0:1.9) arc (0:180:1.9);
+        \draw[red!50!black, thick] (0,0) ++(0:0.14) arc (0:180:0.14);
+
+        % Shoulder joint
+        \fill[black] (0,0) circle (0.08);
+        \node[below=0.15cm] at (0,0) {\footnotesize Shoulder};
+
+        % Sample arm configurations
+        % Extended pose (right side)
+        \draw[thick, gray!60] (0,0) -- (0.9,0.5) -- (1.65,0.95);
+        \node[joint, gray, minimum size=0.12cm] at (1.65,0.95) {};
+
+        % Folded pose (home) - moved slightly left
+        \draw[very thick, blue] (0,0) -- (0.3,0.85);
+        \draw[very thick, blue] (0.3,0.85) -- (-0.15,0.9);
+        \node[joint, blue, minimum size=0.15cm] at (-0.15,0.9) {};
+        \node[blue, font=\small, left] at (-0.25,0.9) {Home};
+
+        % Upward pose (left side)
+        \draw[thick, gray!60] (0,0) -- (-0.5,0.8) -- (-0.4,1.7);
+        \node[joint, gray, minimum size=0.12cm] at (-0.4,1.7) {};
+
+        % r_max indicator - horizontal line at top
+        \draw[<->, green!50!black, thick] (0,1.9) -- (1.9,1.9);
+        \node[green!50!black, font=\scriptsize, above] at (0.95,1.9) {$r_{max}$=0.375m};
+
+        % Scale markers
+        \node[font=\tiny] at (-2,-0.15) {-0.4};
+        \node[font=\tiny] at (-1,-0.15) {-0.2};
+        \node[font=\tiny] at (1,-0.15) {0.2};
+        \node[font=\tiny] at (2,-0.15) {0.4};
+        \node[font=\tiny, left] at (-0.1,1) {0.2};
+        \node[font=\tiny, left] at (-0.1,2) {0.4};
+    \end{tikzpicture}
+\end{column}
+\begin{column}{0.45\textwidth}
+    \textbf{Workspace Definition:}
+    \begin{itemize}
+        \item Shoulder at origin (0, 0)
+        \item Arm operates in Y-Z plane
+        \item Green area = reachable zone
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Boundaries:}
+    \begin{itemize}
+        \item $r_{max} = L_1 + L_2 = 0.375$m
+        \item $r_{min} = |L_1 - L_2| = 0.027$m
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Arm Poses:}
+    \begin{itemize}
+        \item \textcolor{blue}{Blue}: Home (folded)
+        \item \textcolor{gray}{Gray}: Sample configs
+    \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Workspace Parameters
+% ============================================
+\begin{frame}{Workspace Parameters}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{AlohaMiniKinematics:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{lr}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    $L_1$ (upper arm) & 0.174m \\
+    $L_2$ (forearm) & 0.201m \\
+    $r_{min}$ & 0.027m \\
+    $r_{max}$ & 0.375m \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{SO100Kinematics:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{lr}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    $L_1$ (upper arm) & 0.116m \\
+    $L_2$ (forearm) & 0.135m \\
+    $r_{min}$ & 0.019m \\
+    $r_{max}$ & 0.251m \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+\end{column}
+\end{columns}
+
+\vspace{0.5cm}
+
+\begin{block}{Workspace Clamping}
+IK clamps targets to $[r_{min} \times 1.01, r_{max} \times 0.99]$ to avoid singularities at workspace boundaries.
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: Wrist Flex Compensation
+% ============================================
+\begin{frame}{Wrist Flex / Pitch Compensation}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.9, transform shape]
+        % Arm links
+        \draw[link] (0,0) -- (1,1.5);
+        \node[joint] at (0,0) {};
+        \node[joint] at (1,1.5) {};
+
+        \draw[link] (1,1.5) -- (2.5,1.2);
+        \node[joint] at (2.5,1.2) {};
+
+        % Gripper
+        \draw[thick, blue] (2.5,1.2) -- (3.3,1.2);
+
+        % Pitch angle indicator
+        \draw[dashed, gray] (2.5,1.2) -- (3.3,1.4);
+        \draw[->, red] (2.9,1.2) arc (0:15:0.4);
+        \node[red, font=\tiny] at (3.1,1.35) {pitch};
+
+        % Level line
+        \draw[dashed, green!50!black] (2.5,1.2) -- (3.5,1.2);
+
+        % Joint labels
+        \node[font=\tiny] at (-0.2,0) {$j_2$};
+        \node[font=\tiny] at (0.8,1.7) {$j_3$};
+        \node[font=\tiny] at (2.5,0.95) {$j_4$};
+    \end{tikzpicture}
+
+    \vspace{0.3cm}
+
+    \textbf{Pitch Formula:}
+    \[pitch_{EE} = j_2 + j_3 + j_4\]
+
+    For level gripper ($pitch=0$):
+    \[j_4 = -j_2 - j_3\]
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Implementation Variants:}
+
+    \vspace{0.2cm}
+
+    \textbf{AlohaMiniKinematics:}
+    \begin{itemize}
+        \item \code{j4 = pitch - j2 - j3}
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \textbf{SO100Kinematics:}
+    \begin{itemize}
+        \item \code{wrist = j2 - j3 + pitch}
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \textbf{SO100KinematicsV2:}
+    \begin{itemize}
+        \item \code{wrist = pitch - (j2 + j3)}
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \begin{block}{Key Insight}
+    Setting \code{pitch=0} keeps gripper level regardless of arm pose.
+    \end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Module Summary
+% ============================================
+\begin{frame}{Kinematics Module Summary}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+    \textbf{Key Design Decisions:}
+    \begin{enumerate}
+        \item 2-link planar IK (Y-Z plane)
+        \item Law of cosines solution
+        \item URDF geometry offsets
+        \item Workspace clamping
+        \item Pitch compensation
+    \end{enumerate}
+
+    \vspace{0.2cm}
+
+    \textbf{Important Constants:}
+    \begin{itemize}
+        \item Link lengths from URDF
+        \item Geometry angles ($\alpha_1$, $\alpha_2$)
+        \item TCP offsets (V2 only)
+    \end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.55, transform shape, node distance=0.7cm]
+        % Flow diagram
+        \node[module, text width=2cm] (target) {Target};
+        \node[module, text width=2cm, below=of target] (ik) {IK};
+        \node[module, text width=2cm, below=of ik] (joints) {Joints};
+        \node[module, text width=2cm, below=of joints] (fk) {FK};
+        \node[module, text width=2cm, below=of fk] (verify) {Verify};
+
+        % Arrows
+        \draw[flow] (target) -- (ik);
+        \draw[flow] (ik) -- (joints);
+        \draw[flow] (joints) -- (fk);
+        \draw[flow] (fk) -- (verify);
+
+        % Verification loop
+        \draw[flow, dashed, red] (verify.east) -- ++(0.5,0) -- ++(0,2.8) -- (target.east);
+        \node[right, font=\tiny, red] at (1.0,-0.4) {err$<$1mm};
+    \end{tikzpicture}
+
+    \begin{alertblock}{Critical}
+    \scriptsize FK and IK must be mathematically consistent!
+    \end{alertblock}
+\end{column}
+\end{columns}
+\end{frame}
+

@@ -1,0 +1,57 @@
+num_episodes: 2
+seed: 0
+
+load:
+  name: mani_skill_env_loader
+  env_id: AlohaMiniTablePick-v1
+  obs_mode: rgb
+  control_mode: pd_joint_pos_fixed_base
+  render_mode: sensors
+  num_envs: 1
+  sim_backend: auto
+  render_backend: gpu
+  env_kwargs:
+    cube_xy_noise: 0.0
+  domain_randomizer:
+    name: aloha_mini_domain_randomizer
+    enabled: false
+    cube_xy_noise: 0.01
+
+planner:
+  name: so100_scripted_pick_cube
+  task: Pick the cube from the pedestal with the AlohaMini left gripper.
+  arm_dof: 5
+  max_steps: 120
+  open_gripper: 0.037
+  close_gripper: 0.0
+  approach_lift: 0.12
+  lower_lift: 0.04
+  lifted_lift: 0.18
+  approach_steps: 18
+  lower_steps: 16
+  close_steps: 12
+  lift_steps: 18
+  hold_steps: 8
+
+render:
+  name: mani_skill_renderer
+  fps: 30
+  cameras:
+    - cam_main
+    - cam_left_wrist
+    - cam_right_wrist
+  camera_map:
+    cam_main: head
+    cam_left_wrist: hand_left
+    cam_right_wrist: hand_right
+  missing_camera: black
+
+store:
+  name: lerobot_v21
+  output_dir: data_gen/output/aloha_mini_lerobot
+  dataset_name: aloha_mini_table_pick
+  robot_type: aloha_mini_so100_v2
+  fps: 30
+  overwrite: false
+  chunk_size: 1000
+  video_codec: libx264

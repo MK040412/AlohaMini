@@ -1,0 +1,22 @@
+\frametitle{Uninstallation - Code}
+\begin{lstlisting}
+def uninstall():
+    maniskill_path = find_maniskill_path()
+    data_dir = get_maniskill_data_dir()
+
+    # Remove agent files
+    agent_dst = maniskill_path / "agents" / "robots" / "aloha_mini"
+    if agent_dst.exists():
+        shutil.rmtree(agent_dst)
+
+    # Remove asset files
+    asset_dst = data_dir / "robots" / "aloha_mini"
+    if asset_dst.exists():
+        shutil.rmtree(asset_dst)
+
+    # Restore scene builder backup
+    backup = scene_builder_dst.with_suffix(".py.bak")
+    if backup.exists():
+        shutil.copy2(backup, scene_builder_dst)
+        backup.unlink()  # Remove backup file
+\end{lstlisting}

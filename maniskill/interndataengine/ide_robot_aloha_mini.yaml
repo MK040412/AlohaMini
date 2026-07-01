@@ -1,0 +1,84 @@
+# AlohaMini robot configuration (Std, 5-DOF arms) for InternDataEngine / simbox.
+# Dual 5-DOF SO100 arms on a vertical lift column, with roboninecom parallel grippers.
+# Joint indices + prim paths were read from the converted USD (see scratchpad/
+# convert_aloha_urdf.py dump). Articulation DOF order (18):
+#   0 root_x  1 root_y  2 root_z (virtual mobile base, held at home)
+#   3 vertical_move (lift)
+#   4-8  left arm  (shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll)
+#   9,10 left_finger_joint1/2 (parallel gripper, driven together)
+#   11-15 right arm
+#   16,17 right_finger_joint1/2
+
+target_class: AlohaMini
+path: "aloha_mini/robot.usd"
+
+# CuRobo kinematics files (one per arm). See aloha_mini_left_arm.yml / _right_arm.yml.
+robot_file:
+  - workflows/simbox/curobo/src/curobo/content/configs/robot/aloha_mini_left_arm.yml
+  - workflows/simbox/curobo/src/curobo/content/configs/robot/aloha_mini_right_arm.yml
+
+# Gripper parameters (roboninecom clamp: 0..0.037 m per finger, ~74 mm aperture)
+gripper_max_width: 0.074
+gripper_min_width: 0.0
+tcp_offset: 0.10
+
+# Solver parameters
+solver_position_iteration_count: 128
+solver_velocity_iteration_count: 4
+stabilization_threshold: 0.005
+
+# Joint indices (articulation DOF order from the converted USD)
+left_joint_indices: [4, 5, 6, 7, 8]
+right_joint_indices: [11, 12, 13, 14, 15]
+left_gripper_indices: [9, 10]      # parallel gripper: both fingers driven to same value
+right_gripper_indices: [16, 17]
+lift_indices: [3]
+
+# Prim paths (relative to the robot root prim; the robot class prepends robot_prim_path)
+fl_ee_path: "left_Fixed_Jaw"
+fr_ee_path: "right_Fixed_Jaw"
+fl_base_path: "left_Base"
+fr_base_path: "right_Base"
+
+# Gripper keypoints (TCP frame, metres). The AlohaMini jaws point along the palm's local
+# -Y with the tips ~0.10 m out; tool_side offset along the jaw-separation axis.
+fl_gripper_keypoints:
+  tool_head: [0.0, -0.10, 0.0, 1]
+  tool_tail: [0.0, -0.05, 0.0, 1]
+  tool_side: [0.037, -0.10, 0.0, 1]
+fr_gripper_keypoints:
+  tool_head: [0.0, -0.10, 0.0, 1]
+  tool_tail: [0.0, -0.05, 0.0, 1]
+  tool_side: [0.037, -0.10, 0.0, 1]
+
+# Collision filter paths (gripper fingers, ignored vs the grasped object during approach)
+fl_filter_paths:
+  - "left_finger1"
+  - "left_finger2"
+fr_filter_paths:
+  - "right_finger1"
+  - "right_finger2"
+# Arm links that should avoid self-collision constraints during planning
+fl_forbid_collision_paths:
+  - "left_Rotation_Pitch"
+  - "left_Upper_Arm"
+  - "left_Lower_Arm"
+  - "left_Wrist_Pitch_Roll"
+fr_forbid_collision_paths:
+  - "right_Rotation_Pitch"
+  - "right_Upper_Arm"
+  - "right_Lower_Arm"
+  - "right_Wrist_Pitch_Roll"
+
+# Pose processing. AlohaMini jaws approach along the palm local -Y; treat as y-axis tool.
+R_ee_graspnet: [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]]
+ee_axis: "y"
+
+# Default joint home positions (5-DOF arms + parallel grippers open + lift mid)
+left_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0]
+right_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0]
+left_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+right_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0]
+left_gripper_home: [0.037, 0.037]
+right_gripper_home: [0.037, 0.037]
+lift_home: [0.05]

@@ -1,0 +1,78 @@
+num_episodes: 1
+seed: 0
+
+load:
+  name: mani_skill_env_loader
+  env_id: AlohaMiniStack-v1
+  obs_mode: rgb
+  control_mode: pd_joint_pos_fixed_base
+  render_mode: sensors
+  num_envs: 1
+  sim_backend: auto
+  render_backend: gpu
+  env_kwargs:
+    cube_xy_noise: 0.0
+  domain_randomizer:
+    name: aloha_mini_domain_randomizer
+    enabled: false
+
+planner:
+  name: skill_sequence
+  task: Pick the red cube and stack it on the blue cube.
+  arm_dof: 5
+  max_steps: 480
+  objects:
+    - name: cube
+      actor: cube
+      target_class: RigidObject
+      color: red
+    - name: cube2
+      actor: cube2
+      target_class: RigidObject
+      color: blue
+  regions:
+    - object: cube
+      target: platform
+      random_type: fixed_on_pedestal
+    - object: cube2
+      target: stack_platform
+      random_type: fixed_stack_base
+  skills:
+    - name: pick
+      arm: left
+      object_actor: cube
+      approach_height: 0.10
+      descend_offset: -0.01
+      lift_start: 0.0
+      lift_height: 0.16
+    - name: place
+      arm: left
+      target_actor: cube2
+      target_offset: [0.0, 0.0, 0.04]
+      lift_height: 0.16
+      pre_place_height: 0.10
+      place_height_offset: 0.0
+      retreat_height: 0.12
+
+render:
+  name: mani_skill_renderer
+  fps: 30
+  cameras:
+    - cam_main
+    - cam_left_wrist
+    - cam_right_wrist
+  camera_map:
+    cam_main: head
+    cam_left_wrist: hand_left
+    cam_right_wrist: hand_right
+  missing_camera: black
+
+store:
+  name: lerobot_v21
+  output_dir: data_gen/output/aloha_mini_stack_cube
+  dataset_name: aloha_mini_stack_cube
+  robot_type: aloha_mini_so100_v2
+  fps: 30
+  overwrite: false
+  chunk_size: 1000
+  video_codec: libx264

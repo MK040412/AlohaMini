@@ -1,0 +1,216 @@
+% AlohaMini Documentation - Common Preamble
+% Beamer presentation with beaver theme
+
+% ============================================
+% PACKAGES
+% ============================================
+
+% TikZ for diagrams
+\usepackage{tikz}
+\usetikzlibrary{
+    arrows.meta,
+    shapes.geometric,
+    shapes.misc,
+    positioning,
+    calc,
+    fit,
+    backgrounds,
+    decorations.pathreplacing,
+    chains
+}
+
+% Code listings
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Math
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% Tables
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+
+% Graphics
+\usepackage{graphicx}
+
+% Hyperlinks
+\usepackage{hyperref}
+
+% Korean support (optional)
+\usepackage{kotex}
+
+% ============================================
+% CODE LISTING STYLE
+% ============================================
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\definecolor{codeblue}{rgb}{0.13,0.13,0.8}
+
+\lstdefinestyle{pythonstyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen}\itshape,
+    keywordstyle=\color{codeblue}\bfseries,
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\tiny,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=3pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2,
+    language=Python,
+    morekeywords={self, True, False, None, def, class, return, import, from, as, if, else, elif, for, while, try, except, finally, with, yield, lambda, and, or, not, in, is, pass, break, continue, raise, assert, global, nonlocal, async, await},
+    frame=single,
+    framerule=0.5pt,
+    rulecolor=\color{codegray}
+}
+
+\lstset{style=pythonstyle}
+
+% Inline code
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\pycode}[1]{\lstinline[language=Python]{#1}}
+
+% ============================================
+% TIKZ STYLES
+% ============================================
+
+\tikzstyle{module} = [
+    rectangle,
+    rounded corners=3pt,
+    draw=darkred!80,
+    fill=darkred!10,
+    text width=2.5cm,
+    minimum height=1cm,
+    text centered,
+    font=\small\bfseries
+]
+
+\tikzstyle{submodule} = [
+    rectangle,
+    rounded corners=2pt,
+    draw=gray!60,
+    fill=gray!10,
+    text width=2cm,
+    minimum height=0.7cm,
+    text centered,
+    font=\footnotesize
+]
+
+\tikzstyle{class} = [
+    rectangle,
+    draw=blue!60,
+    fill=blue!10,
+    text width=3cm,
+    minimum height=0.8cm,
+    text centered,
+    font=\small\ttfamily
+]
+
+\tikzstyle{arrow} = [
+    ->,
+    >=stealth,
+    thick,
+    draw=darkred!70
+]
+
+\tikzstyle{flow} = [
+    ->,
+    >=Triangle,
+    thick,
+    draw=gray!70
+]
+
+\tikzstyle{joint} = [
+    circle,
+    draw=black,
+    fill=orange!30,
+    minimum size=0.4cm
+]
+
+\tikzstyle{link} = [
+    line width=3pt,
+    draw=gray!60
+]
+
+% ============================================
+% CUSTOM COMMANDS
+% ============================================
+
+% File path styling
+\newcommand{\filepath}[1]{\texttt{\color{codeblue}\small #1}}
+
+% Highlight box
+\newcommand{\highlight}[1]{%
+    \colorbox{yellow!30}{\texttt{#1}}%
+}
+
+% Warning/Note boxes
+\newenvironment{notebox}{%
+    \begin{block}{Note}
+}{%
+    \end{block}
+}
+
+\newenvironment{warningbox}{%
+    \begin{alertblock}{Warning}
+}{%
+    \end{alertblock}
+}
+
+% ============================================
+% BEAMER CUSTOMIZATION
+% ============================================
+
+% Reduce text margins for more content space
+\setbeamersize{text margin left=4mm, text margin right=4mm}
+
+% Allow sloppy line breaking
+\sloppy
+
+% Tolerate small hbox/vbox overflows (up to 20pt for presentations)
+\hfuzz=20pt
+\vfuzz=20pt
+
+% Frame title format (compact)
+\setbeamertemplate{frametitle}{
+    \vspace{0.3em}
+    \insertframetitle
+    \par
+    \vspace{-0.4em}
+    \textcolor{darkred!50}{\rule{\textwidth}{0.3pt}}
+}
+
+% Footer with page numbers
+\setbeamertemplate{footline}{
+    \leavevmode%
+    \hbox{%
+        \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,left]{author in head/foot}%
+            \usebeamerfont{author in head/foot}\hspace{1em}AlohaMini Documentation
+        \end{beamercolorbox}%
+        \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+            \usebeamerfont{title in head/foot}\insertshorttitle
+        \end{beamercolorbox}%
+        \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
+            \usebeamerfont{date in head/foot}\insertframenumber{} / \inserttotalframenumber\hspace{1em}
+        \end{beamercolorbox}%
+    }%
+    \vskip0pt%
+}
+
+% Remove navigation symbols
+\setbeamertemplate{navigation symbols}{}
+
+% Table of contents styling
+\setbeamertemplate{section in toc}[sections numbered]
+\setbeamertemplate{subsection in toc}[subsections numbered]

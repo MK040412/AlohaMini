@@ -262,8 +262,14 @@ class KeyboardController:
         # Update wrist roll (joint 5)
         arm_state.joint5_deg += delta['wrist_roll_delta']
 
-        # Update gripper (joint 6)
-        arm_state.joint6_deg += delta['gripper_delta']
+        # Update gripper aperture (meters; parallel gripper). NOTE: the active
+        # teleop path is TeleopController._apply_delta / compute_action; this
+        # helper is kept for direct callers and uses the same meters convention.
+        if abs(delta['gripper_delta']) > 1e-9:
+            step = 0.006 * (1.0 if delta['gripper_delta'] > 0 else -1.0)
+            arm_state.gripper_pos_m = float(
+                min(0.037, max(0.0, arm_state.gripper_pos_m + step))
+            )
 
         return arm_state
 

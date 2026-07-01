@@ -257,9 +257,9 @@
       xyz="0 1.8801E-05 1" />
     <limit
       lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      upper="0.15"
+      effort="30"
+      velocity="0.5" />
   </joint>
   <link
     name="left_base">
@@ -367,10 +367,10 @@
     <axis
       xyz="0.00011908 0.0099879 -0.99995" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-3.14159"
+      upper="3.14159"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="left_link2">
@@ -425,10 +425,10 @@
     <axis
       xyz="0.999994864047587 -0.00320379392081127 8.70801950002401E-05" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="left_link3">
@@ -483,10 +483,10 @@
     <axis
       xyz="0.99996 -0.0032908 0.0088132" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="left_link4">
@@ -541,10 +541,10 @@
     <axis
       xyz="0.999774464019127 -0.0121028846500289 0.0174511110940406" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="left_link5">
@@ -599,10 +599,10 @@
     <axis
       xyz="0.0119284594940202 0.999878198776736 0.0100647635386641" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="left_link6">
@@ -657,10 +657,10 @@
     <axis
       xyz="-0.999889727846743 0.0120164296808642 -0.00872568417324989" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-3.14159"
+      upper="3.14159"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="right_base">
@@ -768,10 +768,10 @@
     <axis
       xyz="0.000119075661457425 0.00998790806073686 -0.999950112512398" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-3.14159"
+      upper="3.14159"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="right_link2">
@@ -826,10 +826,10 @@
     <axis
       xyz="0.999994864047587 -0.00320379392081127 8.70801950002401E-05" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="right_link3">
@@ -884,10 +884,10 @@
     <axis
       xyz="0.999955748189333 -0.00329083176439995 0.0088131770326472" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="right_link4">
@@ -942,10 +942,10 @@
     <axis
       xyz="0.999774464019126 -0.0121028846500287 0.0174511110940404" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="right_link5">
@@ -1000,10 +1000,10 @@
     <axis
       xyz="0.0119284594940119 0.999878198776736 0.0100647635386643" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-1.5708"
+      upper="1.5708"
+      effort="10"
+      velocity="2.0" />
   </joint>
   <link
     name="right_link6">
@@ -1058,9 +1058,9 @@
     <axis
       xyz="-0.999889727846743 0.0120164296808642 -0.00872568417324984" />
     <limit
-      lower="0"
-      upper="0"
-      effort="0"
-      velocity="0" />
+      lower="-3.14159"
+      upper="3.14159"
+      effort="10"
+      velocity="2.0" />
   </joint>
 </robot>

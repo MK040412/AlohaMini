@@ -53,3 +53,7 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Generated demo videos / datasets / render frames (large; regenerable)
+maniskill/data_gen/output/
+*.parquet

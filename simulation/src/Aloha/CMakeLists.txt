@@ -34,7 +34,14 @@ endif()
  
  
 install(DIRECTORY
-  meshes urdf textures config launch rviz 
+  meshes urdf textures config launch rviz
   DESTINATION share/${PROJECT_NAME}/
 )
+
+install(PROGRAMS
+  scripts/aloha_kinematics.py
+  scripts/aloha_ik_node.py
+  DESTINATION lib/${PROJECT_NAME}/
+)
+
 ament_package()

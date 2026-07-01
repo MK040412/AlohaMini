@@ -1,0 +1,33 @@
+\frametitle{Directory Structure}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\tiny,numbers=none,frame=none]
+AlohaMini/
++-- docs/           # Documentation
++-- hardware/       # CAD files
++-- maniskill/      # ManiSkill3
+|   +-- agents/     # Robot agents
+|   +-- teleop/     # Teleoperation
+|   +-- assets/     # URDF/meshes
+|   +-- examples/   # Demo scripts
++-- software/       # LeRobot
++-- simulation/     # ROS packages
+\end{lstlisting}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{tikzpicture}[scale=0.7, transform shape]
+    % Main box
+    \node[module, text width=4cm, minimum height=1.5cm] (main) at (0,0) {AlohaMini};
+
+    % Sub modules
+    \node[submodule, below left=0.8cm and 0.5cm of main] (agents) {agents/};
+    \node[submodule, below=0.8cm of main] (teleop) {teleop/};
+    \node[submodule, below right=0.8cm and 0.5cm of main] (software) {software/};
+
+    % Arrows
+    \draw[arrow] (main.south west) -- (agents.north);
+    \draw[arrow] (main.south) -- (teleop.north);
+    \draw[arrow] (main.south east) -- (software.north);
+\end{tikzpicture}
+\end{column}
+\end{columns}

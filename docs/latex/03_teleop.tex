@@ -1,0 +1,506 @@
+% 03_teleop.tex - Teleoperation Module
+% AlohaMini Codebase Documentation
+
+\section{Teleoperation Module}
+
+% ============================================
+% SLIDE: Module Overview
+% ============================================
+\begin{frame}{teleop/ Module Overview}
+\begin{columns}
+\begin{column}{0.4\textwidth}
+    \textbf{Purpose:} Real-time teleoperation from keyboard/VR input to ManiSkill3 actions
+
+    \vspace{0.3cm}
+
+    \textbf{Key Files:}
+    \begin{itemize}
+        \item \filepath{controller.py}
+        \item \filepath{config.py}
+        \item \filepath{inputs/base.py}
+        \item \filepath{inputs/keyboard\_controller.py}
+        \item \filepath{inputs/vr\_ws\_server.py}
+    \end{itemize}
+\end{column}
+\begin{column}{0.6\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.7, transform shape]
+        % Input sources
+        \node[submodule] (keyboard) at (-2, 3) {Keyboard};
+        \node[submodule] (vr) at (2, 3) {VR};
+
+        % ControlGoal
+        \node[class, text width=2.5cm] (goal) at (0, 1.5) {ControlGoal};
+
+        % Controller
+        \node[module, text width=3cm] (ctrl) at (0, 0) {TeleopController};
+
+        % Kinematics
+        \node[submodule] (ik) at (0, -1.5) {Kinematics};
+
+        % Action
+        \node[class, text width=2cm] (action) at (0, -3) {16-DOF Action};
+
+        % ManiSkill
+        \node[module, text width=2.5cm] (env) at (0, -4.5) {ManiSkill3};
+
+        % Arrows
+        \draw[flow] (keyboard) -- (goal);
+        \draw[flow] (vr) -- (goal);
+        \draw[flow] (goal) -- (ctrl);
+        \draw[flow] (ctrl) -- (ik);
+        \draw[flow] (ik) -- (action);
+        \draw[flow] (action) -- (env);
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Data Structures - ControlGoal
+% ============================================
+\begin{frame}[fragile]{inputs/base.py - ControlGoal}
+\begin{lstlisting}
+@dataclass
+class ControlGoal:
+    """Command message from input provider to controller."""
+
+    # Target position in normalized space
+    left_target: Optional[np.ndarray] = None   # [x, y, z]
+    right_target: Optional[np.ndarray] = None  # [x, y, z]
+
+    # Direct joint angle targets (radians)
+    left_joint_angles: Optional[np.ndarray] = None  # 6 joints
+    right_joint_angles: Optional[np.ndarray] = None
+
+    # Gripper state
+    left_gripper_closed: bool = False
+    right_gripper_closed: bool = False
+
+    # Control mode
+    mode: ControlMode = ControlMode.IDLE
+
+    # Mobile base velocity
+    base_velocity: Optional[np.ndarray] = None  # [vx, vy, omega]
+
+    # Lift delta
+    lift_delta: float = 0.0
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: Data Structures - ArmState
+% ============================================
+\begin{frame}[fragile]{inputs/base.py - ArmState}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+@dataclass
+class ArmState:
+    """Internal state tracking for one arm."""
+    ee_pos: np.ndarray        # [y, z] in arm plane
+    joint_angles: np.ndarray  # 6 joints (radians)
+    pitch: float = 0.0        # Elbow angle sum
+    gripper_closed: bool = False
+    target_pos: Optional[np.ndarray] = None
+\end{lstlisting}
+
+\vspace{0.2cm}
+
+\begin{block}{Coordinate System}
+\begin{itemize}
+    \item \code{ee\_y}: Forward direction (usually negative at home)
+    \item \code{ee\_z}: Height (positive = up)
+\end{itemize}
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: ControlMode Enum
+% ============================================
+\begin{frame}[fragile]{inputs/base.py - ControlMode}
+\begin{lstlisting}
+class ControlMode(Enum):
+    """Control mode for teleoperation."""
+
+    IDLE = "idle"           # No active control
+    POSITION = "position"   # Position control (IK-based)
+    VELOCITY = "velocity"   # Velocity control (direct joint)
+\end{lstlisting}
+
+\vspace{0.5cm}
+
+\begin{table}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Mode} & \textbf{Input} & \textbf{Processing} \\
+\midrule
+IDLE & None & Hold current position \\
+POSITION & Target [x,y,z] & IK solver computes joints \\
+VELOCITY & Joint deltas & Direct joint angle update \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{frame}
+
+% ============================================
+% SLIDE: TeleopController Overview
+% ============================================
+\begin{frame}{controller.py - TeleopController}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Responsibilities:}
+    \begin{itemize}
+        \item Process keyboard/VR input
+        \item Compute IK for both arms
+        \item Generate 16-DOF action array
+        \item Track arm states
+        \item Handle mobile base control
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Key Methods:}
+    \begin{itemize}
+        \item \code{process\_goal()}
+        \item \code{compute\_action()}
+        \item \code{update\_arm\_state()}
+        \item \code{get\_action()}
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{State Variables:}
+    \begin{itemize}
+        \item \code{left\_arm\_state: ArmState}
+        \item \code{right\_arm\_state: ArmState}
+        \item \code{current\_lift: float}
+        \item \code{kinematics: AlohaMiniKinematics}
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Configuration:}
+    \begin{itemize}
+        \item Control frequency: 50 Hz
+        \item Position step: 4mm
+        \item Angle step: $1^{\circ}$
+    \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: TeleopController - process_goal
+% ============================================
+\begin{frame}[fragile,shrink=3]{controller.py - process\_goal()}
+\begin{lstlisting}
+def process_goal(self, goal: ControlGoal):
+    """Process a control goal and update internal state."""
+
+    # Handle mobile base velocity
+    if goal.base_velocity is not None:
+        self.base_velocity = goal.base_velocity
+
+    # Handle lift
+    if goal.lift_delta != 0:
+        self.current_lift += goal.lift_delta
+        self.current_lift = np.clip(
+            self.current_lift, 0.0, 0.6)  # 0-60cm
+
+    # Handle left arm
+    if goal.left_target is not None:
+        self._update_arm_from_target(
+            self.left_arm_state, goal.left_target)
+    elif goal.left_joint_angles is not None:
+        self.left_arm_state.joint_angles = goal.left_joint_angles
+
+    # Handle gripper
+    self.left_arm_state.gripper_closed = goal.left_gripper_closed
+
+    # Similar for right arm...
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: TeleopController - compute_action
+% ============================================
+\begin{frame}[fragile]{controller.py - compute\_action()}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+def compute_action(self) -> np.ndarray:
+    """Generate 16-DOF action array for ManiSkill3."""
+    action = np.zeros(16)
+    action[0:3] = self.base_velocity     # [vx, vy, omega]
+    action[3] = self.current_lift        # Lift position
+    action[4:10] = self.left_arm_state.joint_angles   # Left arm
+    action[10:16] = self.right_arm_state.joint_angles # Right arm
+    return action
+\end{lstlisting}
+
+\begin{block}{Action Space Layout}
+\small\texttt{[vx, vy, omega, lift, L1..L6, R1..R6]}
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: Keyboard Controller
+% ============================================
+\begin{frame}{inputs/keyboard\_controller.py}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Left Arm Keys:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{ll}
+    \toprule
+    \textbf{Keys} & \textbf{Action} \\
+    \midrule
+    Q/A & Joint 1 (+/-) \\
+    W/S & Joint 2 (+/-) \\
+    E/D & Joint 3 (+/-) \\
+    R/F & Joint 4 (+/-) \\
+    T/G & Joint 5 (+/-) \\
+    Y/H & Gripper \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Right Arm Keys:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{ll}
+    \toprule
+    \textbf{Keys} & \textbf{Action} \\
+    \midrule
+    U/J & Joint 1 (+/-) \\
+    I/K & Joint 2 (+/-) \\
+    O/L & Joint 3 (+/-) \\
+    P/; & Joint 4 (+/-) \\
+    {[}/' & Joint 5 (+/-) \\
+    {]}/\textbackslash & Gripper \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+\end{column}
+\end{columns}
+
+\vspace{0.3cm}
+
+\textbf{Mobile Base:} Numpad 8/5 (forward/back), 4/6 (left/right), 7/9 (rotate)
+
+\textbf{Lift:} PageUp/PageDown
+\end{frame}
+
+% ============================================
+% SLIDE: Keyboard Controller Code
+% ============================================
+\begin{frame}[fragile]{keyboard\_controller.py - Key Processing}
+\begin{lstlisting}
+def process_input(self, keys) -> ControlGoal:
+    """Process pygame key states to ControlGoal."""
+
+    goal = ControlGoal(mode=ControlMode.VELOCITY)
+    joint_deltas = np.zeros(6)
+
+    # Left arm joint control
+    if keys[pygame.K_q]: joint_deltas[0] += self.angle_step
+    if keys[pygame.K_a]: joint_deltas[0] -= self.angle_step
+    if keys[pygame.K_w]: joint_deltas[1] += self.angle_step
+    if keys[pygame.K_s]: joint_deltas[1] -= self.angle_step
+    # ... more joints
+
+    # Apply deltas to current state
+    goal.left_joint_angles = self.current_left + joint_deltas
+
+    # Mobile base
+    base_vel = np.zeros(3)
+    if keys[pygame.K_KP8]: base_vel[0] = 0.3  # forward
+    if keys[pygame.K_KP5]: base_vel[0] = -0.3 # backward
+    goal.base_velocity = base_vel
+
+    return goal
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: VR WebSocket Server
+% ============================================
+\begin{frame}{inputs/vr\_ws\_server.py - VR Interface}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Features:}
+    \begin{itemize}
+        \item WebXR controller input
+        \item HTTPS + WebSocket Secure
+        \item Real-time camera streaming
+        \item Pose-to-IK conversion
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \textbf{Protocol:}
+    \begin{enumerate}
+        \item Client connects via WSS
+        \item Sends controller poses (JSON)
+        \item Server converts to ControlGoal
+        \item Streams camera frames back
+    \end{enumerate}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.85, transform shape]
+        % VR Headset
+        \node[module, text width=2.8cm] (vr) at (0, 3) {VR Headset\\(WebXR)};
+
+        % WebSocket
+        \node[class, text width=2.8cm] (ws) at (0, 1.2) {WebSocket\\(WSS)};
+
+        % Server
+        \node[module, text width=2.8cm] (server) at (0, -0.6) {VRWebSocket\\Server};
+
+        % Controller State - moved to right side
+        \node[submodule, text width=2cm] (state) at (3, -0.6) {\scriptsize VRController\\State};
+
+        % Controller
+        \node[submodule, text width=2.4cm] (ctrl) at (0, -2.4) {TeleopController};
+
+        % Arrows
+        \draw[flow, <->] (vr) -- node[right, font=\tiny] {Pose/Frames} (ws);
+        \draw[flow, <->] (ws) -- (server);
+        \draw[flow, dashed] (server) -- (state);
+        \draw[flow] (server) -- node[right, font=\tiny] {ControlGoal} (ctrl);
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: VR Message Format
+% ============================================
+\begin{frame}[fragile]{vr\_ws\_server.py - Message Format}
+\begin{lstlisting}
+# Incoming VR controller message
+{
+    "type": "controller_update",
+    "left": {
+        "position": [x, y, z],      # World coordinates
+        "rotation": [qx, qy, qz, qw],
+        "buttons": {
+            "trigger": 0.8,         # Gripper control
+            "grip": true
+        }
+    },
+    "right": { ... },
+    "head": {
+        "position": [x, y, z],
+        "rotation": [qx, qy, qz, qw]
+    }
+}
+\end{lstlisting}
+
+\begin{block}{Scaling}
+VR positions are scaled by \code{vr\_position\_scale\_xy = 0.7} before IK
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: config.py
+% ============================================
+\begin{frame}[fragile,shrink=3]{config.py - TeleopConfig}
+\begin{lstlisting}
+@dataclass
+class TeleopConfig:
+    """Teleoperation configuration."""
+
+    # Network settings
+    host_ip: str = "0.0.0.0"
+    ws_port: int = 8765
+    https_port: int = 8443
+
+    # SSL certificates
+    cert_file: str = "cert.pem"
+    key_file: str = "key.pem"
+
+    # Control parameters
+    control_freq: int = 50       # Hz
+    pos_step: float = 0.004      # 4mm per step
+    angle_step: float = 1.0      # 1 degree per step
+
+    # IK parameters (from URDF)
+    l1: float = 0.116            # Upper arm length
+    l2: float = 0.134            # Lower arm length
+
+    # VR scaling
+    vr_position_scale_xy: float = 0.7
+    vr_position_scale_z: float = 1.0
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: Teleop Flow Diagram
+% ============================================
+\begin{frame}[shrink=5]{Teleoperation Data Flow}
+\centering
+\begin{tikzpicture}[scale=0.65, transform shape, node distance=0.8cm]
+    % Input layer
+    \node[submodule, text width=2cm] (kbd) at (-2.5, 3.2) {Keyboard};
+    \node[submodule, text width=2cm] (vr) at (2.5, 3.2) {VR};
+
+    % Input providers
+    \node[class, text width=2.2cm] (kbdctrl) at (-2.5, 1.6) {Keyboard\\Controller};
+    \node[class, text width=2.2cm] (vrctrl) at (2.5, 1.6) {VRWebSocket\\Server};
+
+    % ControlGoal
+    \node[class, text width=2.4cm, fill=yellow!20] (goal) at (0, 0) {ControlGoal};
+
+    % TeleopController
+    \node[module, text width=2.6cm] (teleop) at (0, -1.5) {TeleopController};
+
+    % Kinematics
+    \node[class, text width=2.4cm] (kin) at (0, -2.9) {SO100KinematicsV2};
+
+    % Action
+    \node[class, text width=2.2cm, fill=green!20] (action) at (0, -4.3) {16-DOF Action};
+
+    % ManiSkill
+    \node[module, text width=2.4cm] (env) at (0, -5.7) {ManiSkill3};
+
+    % Arrows
+    \draw[flow] (kbd) -- (kbdctrl);
+    \draw[flow] (vr) -- (vrctrl);
+    \draw[flow] (kbdctrl) -- (goal);
+    \draw[flow] (vrctrl) -- (goal);
+    \draw[flow] (goal) -- (teleop);
+    \draw[flow] (teleop) -- (kin);
+    \draw[flow] (kin) -- (action);
+    \draw[flow] (action) -- (env);
+\end{tikzpicture}
+\end{frame}
+
+% ============================================
+% SLIDE: Demo Scripts
+% ============================================
+\begin{frame}{Demo Scripts}
+\begin{table}
+\centering
+\footnotesize
+\begin{tabular}{lp{6.5cm}}
+\toprule
+\textbf{Script} & \textbf{Description} \\
+\midrule
+demo\_teleop.py & Keyboard teleoperation (pygame) \\
+demo\_vr\_teleop\_stream.py & VR teleoperation (WebXR) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.3cm}
+
+\textbf{Usage:}
+
+\footnotesize
+Keyboard: \texttt{python demo\_teleop.py}
+
+VR: \texttt{python demo\_vr\_teleop\_stream.py}
+\end{frame}

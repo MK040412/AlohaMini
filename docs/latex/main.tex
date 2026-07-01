@@ -1,0 +1,156 @@
+% AlohaMini Codebase Documentation
+% LaTeX Beamer Presentation
+
+\documentclass[aspectratio=169]{beamer}
+
+% Theme settings
+\usetheme{CambridgeUS}
+\usecolortheme{default}
+
+% Define darkred color for compatibility
+\definecolor{darkred}{rgb}{0.55, 0.0, 0.0}
+
+% Load common preamble
+\input{preamble}
+
+% ============================================
+% DOCUMENT INFORMATION
+% ============================================
+
+\title[AlohaMini]{AlohaMini Codebase Documentation}
+\subtitle{Dual-Arm Mobile Manipulation Robot}
+\author{Technical Documentation}
+\date{\today}
+\institute{ManiSkill3 Integration}
+
+% ============================================
+% DOCUMENT BODY
+% ============================================
+
+\begin{document}
+
+% Title slide
+\begin{frame}
+    \titlepage
+\end{frame}
+
+% Table of contents
+\begin{frame}{Contents}
+    \tableofcontents
+\end{frame}
+
+% ============================================
+% SECTION 1: OVERVIEW
+% ============================================
+\input{01_overview}
+
+% ============================================
+% SECTION 2: AGENTS MODULE
+% ============================================
+\input{02_agents}
+
+% ============================================
+% SECTION 3: TELEOPERATION MODULE
+% ============================================
+\input{03_teleop}
+
+% ============================================
+% SECTION 4: KINEMATICS MODULE
+% ============================================
+\input{04_kinematics}
+
+% ============================================
+% SECTION 5: LEROBOT (PHYSICAL ROBOT)
+% ============================================
+\input{05_lerobot}
+
+% ============================================
+% SECTION 6: ROS SIMULATION
+% ============================================
+\input{06_simulation}
+
+% ============================================
+% APPENDIX: DIRECTORY STRUCTURE
+% ============================================
+
+\appendix
+
+\section{Appendix}
+
+\begin{frame}[fragile]{Directory Structure}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\tiny,numbers=none,frame=none]
+AlohaMini/
++-- docs/           # Documentation
++-- hardware/       # CAD files
++-- maniskill/      # ManiSkill3
+|   +-- agents/     # Robot agents
+|   +-- teleop/     # Teleoperation
+|   +-- assets/     # URDF/meshes
+|   +-- examples/   # Demo scripts
++-- software/       # LeRobot
++-- simulation/     # ROS packages
+\end{lstlisting}
+\end{column}
+\begin{column}{0.5\textwidth}
+\begin{tikzpicture}[scale=0.7, transform shape]
+    % Main box
+    \node[module, text width=4cm, minimum height=1.5cm] (main) at (0,0) {AlohaMini};
+
+    % Sub modules
+    \node[submodule, below left=0.8cm and 0.5cm of main] (agents) {agents/};
+    \node[submodule, below=0.8cm of main] (teleop) {teleop/};
+    \node[submodule, below right=0.8cm and 0.5cm of main] (software) {software/};
+
+    % Arrows
+    \draw[arrow] (main.south west) -- (agents.north);
+    \draw[arrow] (main.south) -- (teleop.north);
+    \draw[arrow] (main.south east) -- (software.north);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Module Dependencies}
+\centering
+\begin{tikzpicture}[node distance=1cm, scale=0.7, transform shape]
+    % Top level
+    \node[module, text width=2.5cm] (maniskill) {ManiSkill3};
+
+    % Second level
+    \node[module, text width=2.2cm, below=of maniskill] (agents) {agents/};
+
+    % Third level
+    \node[module, text width=2.2cm, below left=1cm and 0.5cm of agents] (teleop) {teleop/};
+    \node[module, text width=2.2cm, below right=1cm and 0.5cm of agents] (kinematics) {kinematics/};
+
+    % Fourth level
+    \node[submodule, text width=1.8cm, below left=0.8cm and 0cm of teleop] (keyboard) {keyboard};
+    \node[submodule, text width=1.8cm, below right=0.8cm and 0cm of teleop] (vr) {VR};
+
+    % Arrows
+    \draw[arrow] (agents) -- (maniskill);
+    \draw[arrow] (teleop) -- (agents);
+    \draw[arrow] (kinematics) -- (agents);
+    \draw[arrow] (keyboard) -- (teleop);
+    \draw[arrow] (vr) -- (teleop);
+\end{tikzpicture}
+\end{frame}
+
+% Final slide
+\begin{frame}
+\centering
+\vspace{2cm}
+{\Huge\color{darkred} Thank You}
+
+\vspace{1cm}
+
+{\large AlohaMini Codebase Documentation}
+
+\vspace{0.5cm}
+
+\url{https://github.com/AlohaMini}
+\end{frame}
+
+\end{document}

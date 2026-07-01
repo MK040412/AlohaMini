@@ -1,0 +1,200 @@
+% 01_overview.tex - Project Overview
+% AlohaMini Codebase Documentation
+
+\section{Project Overview}
+
+% ============================================
+% SLIDE: Introduction
+% ============================================
+\begin{frame}{AlohaMini Robot}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Dual-Arm Mobile Manipulation Robot}
+    \vspace{0.5cm}
+
+    \begin{itemize}
+        \item 16 DOF total configuration
+        \item Omnidirectional mobile base (3 wheels)
+        \item Vertical lift mechanism
+        \item Dual 6-DOF arms
+        \item 5-camera perception system
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.8, transform shape]
+        % Base
+        \draw[fill=gray!30, rounded corners=5pt] (-2,-0.5) rectangle (2,0.5);
+        \node at (0,0) {\small Mobile Base};
+
+        % Wheels
+        \draw[fill=black!60] (-1.5,-0.7) circle (0.2);
+        \draw[fill=black!60] (1.5,-0.7) circle (0.2);
+        \draw[fill=black!60] (0,-0.7) circle (0.2);
+
+        % Lift
+        \draw[fill=blue!20] (-0.3,0.5) rectangle (0.3,2);
+        \node[rotate=90] at (0,1.25) {\tiny Lift};
+
+        % Arm platform
+        \draw[fill=gray!20] (-1.5,2) rectangle (1.5,2.5);
+
+        % Left arm
+        \draw[line width=2pt, gray!60] (-1,2.5) -- (-1.5,3.5) -- (-2,4);
+        \node[joint] at (-1,2.5) {};
+        \node[joint] at (-1.5,3.5) {};
+        \node[joint] at (-2,4) {};
+        \node[above] at (-2,4) {\tiny L};
+
+        % Right arm
+        \draw[line width=2pt, gray!60] (1,2.5) -- (1.5,3.5) -- (2,4);
+        \node[joint] at (1,2.5) {};
+        \node[joint] at (1.5,3.5) {};
+        \node[joint] at (2,4) {};
+        \node[above] at (2,4) {\tiny R};
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Robot Specifications
+% ============================================
+\begin{frame}{Robot Specifications}
+\begin{table}
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Component} & \textbf{DOF} & \textbf{Type} \\
+\midrule
+Mobile Base (X, Y, $\theta$) & 3 & Prismatic/Continuous \\
+Vertical Lift & 1 & Prismatic \\
+Left Arm & 6 & Revolute \\
+Right Arm & 6 & Revolute \\
+\midrule
+\textbf{Total} & \textbf{16} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{0.5cm}
+
+\begin{block}{Action Space (ManiSkill3)}
+\texttt{[base\_x, base\_y, base\_rot, lift, left\_arm(6), right\_arm(6)]}
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: Software Stack
+% ============================================
+\begin{frame}{Software Stack}
+\centering
+\begin{tikzpicture}[node distance=0.8cm, scale=0.9, transform shape]
+    % Stack layers
+    \node[module, text width=8cm, minimum height=1cm] (app) at (0,0)
+        {Application Layer\\(VR Teleop, Keyboard Control, Voice Commands)};
+
+    \node[module, text width=8cm, minimum height=1cm, below=of app] (ctrl)
+        {Control Layer\\(TeleopController, Kinematics, Input Providers)};
+
+    \node[module, text width=8cm, minimum height=1cm, below=of ctrl] (sim)
+        {Simulation Layer\\(ManiSkill3, SAPIEN, PyTorch)};
+
+    \node[module, text width=8cm, minimum height=1cm, below=of sim] (hw)
+        {Hardware Layer\\(LeRobot, Feetech Motors, Cameras)};
+
+    % Arrows
+    \draw[flow] (app) -- (ctrl);
+    \draw[flow] (ctrl) -- (sim);
+    \draw[flow] (ctrl) -- (hw);
+
+    % Side labels
+    \node[left=0.5cm of app, font=\footnotesize, text=gray] {Python/WebXR};
+    \node[left=0.5cm of ctrl, font=\footnotesize, text=gray] {teleop/};
+    \node[left=0.5cm of sim, font=\footnotesize, text=gray] {agents/};
+    \node[left=0.5cm of hw, font=\footnotesize, text=gray] {software/};
+\end{tikzpicture}
+\end{frame}
+
+% ============================================
+% SLIDE: Key Features
+% ============================================
+\begin{frame}{Key Features}
+\begin{columns}[t]
+\begin{column}{0.5\textwidth}
+    \textbf{Simulation (ManiSkill3)}
+    \begin{itemize}
+        \item GPU-accelerated physics
+        \item Virtual mobile base
+        \item Grasping detection
+        \item Camera rendering
+        \item ReplicaCAD scenes
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Teleoperation}
+    \begin{itemize}
+        \item Keyboard control (XLeRobot-style)
+        \item VR control (WebXR)
+        \item 50 Hz control loop
+        \item IK-based arm control
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Physical Robot}
+    \begin{itemize}
+        \item LeRobot integration
+        \item 5-camera perception
+        \item Trajectory recording
+        \item Voice commands
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{ROS Simulation}
+    \begin{itemize}
+        \item RViz visualization
+        \item Gazebo physics
+        \item URDF models
+        \item ROS1/ROS2 support
+    \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Code Metrics
+% ============================================
+\begin{frame}{Code Metrics}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \begin{table}
+    \centering
+    \begin{tabular}{lr}
+    \toprule
+    \textbf{Module} & \textbf{Lines} \\
+    \midrule
+    agents/aloha\_mini & $\sim$850 \\
+    teleop/ & $\sim$2,000 \\
+    kinematics/ & $\sim$800 \\
+    software/ (LeRobot) & $\sim$1,500 \\
+    \midrule
+    \textbf{Total} & $\sim$5,150 \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Key Classes}
+    \begin{itemize}
+        \item \code{AlohaMiniVirtual}
+        \item \code{TeleopController}
+        \item \code{AlohaMiniKinematics}
+        \item \code{ControlGoal}
+        \item \code{KeyboardController}
+        \item \code{VRControllerServer}
+    \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}

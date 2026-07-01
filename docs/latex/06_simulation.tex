@@ -1,0 +1,435 @@
+% 06_simulation.tex - ROS Simulation Module
+% AlohaMini Codebase Documentation
+
+\section{ROS Simulation}
+
+% ============================================
+% SLIDE: Module Overview
+% ============================================
+\begin{frame}{simulation/ Module Overview}
+\begin{columns}
+\begin{column}{0.4\textwidth}
+    \textbf{Purpose:} ROS visualization \& physics
+
+    \vspace{0.2cm}
+
+    \textbf{Structure:}
+    \begin{itemize}
+        \item \filepath{src/Aloha/} - ROS package
+        \item \filepath{urdf/} - Robot model
+        \item \filepath{meshes/} - STL files
+        \item \filepath{launch/} - Launch files
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \textbf{Support:}
+    \begin{itemize}
+        \item ROS1 Noetic / ROS2 Humble
+        \item RViz / Gazebo
+    \end{itemize}
+\end{column}
+\begin{column}{0.6\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.7, transform shape]
+        % Package structure
+        \node[module, text width=3.2cm] (pkg) at (0,0) {\textbf{Aloha Package}};
+
+        % Components
+        \node[submodule, text width=2cm, below left=1cm and 0.3cm of pkg] (urdf) {urdf/};
+        \node[submodule, text width=2cm, below=1cm of pkg] (launch) {launch/};
+        \node[submodule, text width=2cm, below right=1cm and 0.3cm of pkg] (meshes) {meshes/};
+
+        % Arrows
+        \draw[arrow] (pkg) -- (urdf);
+        \draw[arrow] (pkg) -- (launch);
+        \draw[arrow] (pkg) -- (meshes);
+
+        % Tools
+        \node[class, text width=1.8cm, above left=0.6cm and 0cm of pkg] (rviz) {RViz};
+        \node[class, text width=1.8cm, above right=0.6cm and 0cm of pkg] (gazebo) {Gazebo};
+
+        \draw[flow] (pkg) -- (rviz);
+        \draw[flow] (pkg) -- (gazebo);
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: URDF Structure
+% ============================================
+\begin{frame}{URDF Robot Model}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Link/Joint Structure:}
+    \begin{itemize}
+        \item \code{base\_link} - Robot base
+        \item \code{wheel1-3} - Omniwheels
+        \item \code{vertical\_move} - Lift
+        \item \code{left\_joint1..6} - Left arm
+        \item \code{right\_joint1..6} - Right arm
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \textbf{Total:} 17 joints (3 + 1 + 6 + 6 + gripper)
+\end{column}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.85, transform shape, level distance=1.4cm,
+        level 1/.style={sibling distance=3.5cm},
+        level 2/.style={sibling distance=2.2cm}]
+        \node[module, text width=2cm] {base\_link}
+            child {node[submodule, text width=1.7cm] {\scriptsize wheels (3)}}
+            child {node[module, text width=2cm] {vertical\_link}
+                child {node[submodule, text width=1.7cm] {\scriptsize left\_arm (6)}}
+                child {node[submodule, text width=1.7cm] {\scriptsize right\_arm (6)}}
+            };
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Joint Configuration
+% ============================================
+\begin{frame}[fragile]{Joint Names Configuration}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+# config/joint_names_Aloha.yaml
+controller_joint_names: [
+    '',              # Empty (index 0)
+    'wheel1', 'wheel2', 'wheel3',         # Wheels
+    'vertical_move',                       # Lift
+    'left_joint1', ..., 'left_joint6',    # Left arm
+    'right_joint1', ..., 'right_joint6',  # Right arm
+]
+\end{lstlisting}
+
+\vspace{0.3cm}
+
+\textbf{Joint Indexing:}
+\begin{itemize}
+    \item Index 0: Empty placeholder
+    \item Index 1-3: Omniwheels
+    \item Index 4: Lift mechanism
+    \item Index 5-10: Left arm (6 DOF)
+    \item Index 11-16: Right arm (6 DOF)
+\end{itemize}
+\end{frame}
+
+% ============================================
+% SLIDE: ROS1 Launch Files
+% ============================================
+\begin{frame}[fragile]{ROS1 Launch Files}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\textbf{display.launch} (RViz):
+\begin{lstlisting}
+<launch>
+  <param name="robot_description"
+    textfile="$(find Aloha)/urdf/Aloha.urdf"/>
+
+  <node name="joint_state_publisher_gui"
+    pkg="joint_state_publisher_gui"
+    type="joint_state_publisher_gui"/>
+
+  <node name="robot_state_publisher"
+    pkg="robot_state_publisher"
+    type="robot_state_publisher"/>
+
+  <node name="rviz"
+    pkg="rviz"
+    type="rviz"
+    args="-d $(find Aloha)/urdf.rviz"/>
+</launch>
+\end{lstlisting}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{gazebo.launch} (Physics):
+\begin{lstlisting}
+<launch>
+  <include file="$(find gazebo_ros)/
+    launch/empty_world.launch"/>
+
+  <node name="tf_footprint_base"
+    pkg="tf"
+    type="static_transform_publisher"
+    args="0 0 0 0 0 0 base_link
+          base_footprint 40"/>
+
+  <node name="spawn_model"
+    pkg="gazebo_ros"
+    type="spawn_model"
+    args="-file $(find Aloha)/urdf/
+          Aloha.urdf -urdf -model Aloha"
+    output="screen"/>
+</launch>
+\end{lstlisting}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: ROS2 Launch File
+% ============================================
+\begin{frame}[fragile]{ROS2 Launch File (Python)}
+\begin{lstlisting}
+# display.launch.py
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    bringup_dir = get_package_share_directory('Aloha')
+    urdf_path = os.path.join(bringup_dir, 'urdf', 'Aloha.urdf')
+
+    with open(urdf_path, 'r') as f:
+        robot_description = f.read()
+
+    return LaunchDescription([
+        Node(package='robot_state_publisher', executable='robot_state_publisher',
+             parameters=[{'robot_description': robot_description}]),
+        Node(package='joint_state_publisher', executable='joint_state_publisher'),
+        Node(package='rviz2', executable='rviz2',
+             arguments=['-d', rviz_config_path]),
+    ])
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: Package Dependencies
+% ============================================
+\begin{frame}[fragile]{Package Dependencies (package.xml)}
+\begin{lstlisting}
+<?xml version="1.0"?>
+<package format="3">
+  <name>Aloha</name>
+  <version>0.1.0</version>
+  <description>AlohaMini Robot</description>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: RViz Visualization
+% ============================================
+\begin{frame}{RViz Visualization}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Features:}
+    \begin{itemize}
+        \item Robot model visualization
+        \item TF frame tree display
+        \item Joint state publisher GUI
+        \item Interactive joint control
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Usage (ROS1):}
+    \begin{itemize}
+        \item \code{roslaunch Aloha display.launch}
+    \end{itemize}
+
+    \textbf{Usage (ROS2):}
+    \begin{itemize}
+        \item \code{ros2 launch Aloha display.launch.py}
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.8, transform shape, node distance=1cm]
+        % RViz workflow
+        \node[module, text width=3cm] (urdf) {URDF Model};
+        \node[module, text width=3cm, below=of urdf] (rsp) {Robot State\\Publisher};
+        \node[module, text width=3cm, below=of rsp] (jsp) {Joint State\\Publisher};
+        \node[module, text width=3cm, below=of jsp] (rviz) {RViz};
+
+        \draw[flow] (urdf) -- (rsp);
+        \draw[flow] (rsp) -- (jsp);
+        \draw[flow] (jsp) -- (rviz);
+
+        % Topics
+        \node[submodule, text width=2cm, right=0.5cm of rsp] (tf) {/tf};
+        \node[submodule, text width=2cm, right=0.5cm of jsp] (js) {/joint\_states};
+
+        \draw[flow, dashed] (rsp) -- (tf);
+        \draw[flow, dashed] (jsp) -- (js);
+        \draw[flow, dashed] (tf) -- (rviz);
+        \draw[flow, dashed] (js) -- (rviz);
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Gazebo Simulation
+% ============================================
+\begin{frame}[shrink=3]{Gazebo Physics Simulation}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Features:}
+    \begin{itemize}
+        \item Full physics simulation
+        \item Collision detection
+        \item Inertia-based dynamics
+        \item World interaction
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Launch Components:}
+    \begin{enumerate}
+        \item Empty world spawn
+        \item TF footprint publisher
+        \item Model spawner
+        \item Fake joint calibration
+    \end{enumerate}
+
+    \vspace{0.3cm}
+
+    \textbf{Usage:}
+    \begin{itemize}
+        \item \code{roslaunch Aloha gazebo.launch}
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.9, transform shape, node distance=1.1cm]
+        % Gazebo workflow
+        \node[module, text width=3.2cm] (world) {Gazebo World};
+
+        % Physics Engine
+        \node[class, text width=2.6cm, right=0.6cm of world] (physics) {Physics\\Engine};
+        \draw[flow, <->] (world) -- (physics);
+
+        % Spawn Model
+        \node[module, text width=3.2cm, below=of world] (spawn) {Spawn Model};
+        \draw[flow] (spawn) -- (world);
+
+        % URDF and Meshes
+        \node[submodule, text width=2.2cm, below left=0.9cm and -0.3cm of spawn] (urdf) {URDF};
+        \node[submodule, text width=2.2cm, below right=0.9cm and -0.3cm of spawn] (mesh) {Meshes};
+
+        \draw[flow] (urdf) -- (spawn);
+        \draw[flow] (mesh) -- (spawn);
+
+        % Topics output
+        \node[submodule, text width=2.8cm, below=2.8cm of world] (topics) {
+            \scriptsize /gazebo/states\\
+            \scriptsize /calibrated
+        };
+        \draw[flow, dashed] (world) -- node[left, font=\tiny] {publish} (topics);
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Directory Structure
+% ============================================
+\begin{frame}[fragile,shrink=3]{Directory Structure}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\tiny,numbers=none,frame=none]
+simulation/src/Aloha/
++-- config/
+|   +-- joint_names_Aloha.yaml
++-- launch/
+|   +-- display.launch      # ROS1
+|   +-- display.launch.py   # ROS2
+|   +-- gazebo.launch
++-- meshes/
+|   +-- base_link.STL
+|   +-- wheel*.STL
+|   +-- left_joint*.STL
+|   +-- right_joint*.STL
++-- urdf/
+|   +-- Aloha.urdf
++-- package.xml
+\end{lstlisting}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Mesh Files:}
+    \begin{itemize}
+        \item STL format (binary)
+        \item SolidWorks export
+        \item Collision \& visual
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \textbf{Build System:}
+    \begin{itemize}
+        \item ament\_cmake (ROS2)
+        \item catkin (ROS1 compatible)
+    \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Module Summary
+% ============================================
+\begin{frame}{ROS Simulation Summary}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Key Components:}
+    \begin{itemize}
+        \item URDF robot model
+        \item STL mesh files
+        \item ROS1/ROS2 launch files
+        \item Joint configuration
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Visualization:}
+    \begin{itemize}
+        \item RViz for visual inspection
+        \item Joint state publisher GUI
+        \item TF frame visualization
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Physics Simulation:}
+    \begin{itemize}
+        \item Gazebo integration
+        \item Inertia-based dynamics
+        \item Collision meshes
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Comparison with ManiSkill3:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{lcc}
+    \toprule
+    \textbf{Feature} & \textbf{ROS} & \textbf{ManiSkill3} \\
+    \midrule
+    Physics & Gazebo & SAPIEN \\
+    GPU Accel & No & Yes \\
+    RL Support & Limited & Native \\
+    Visualization & RViz & Viewer \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+\end{column}
+\end{columns}
+\end{frame}
+

@@ -44,6 +44,13 @@ class TeleopController:
     RIGHT_ARM_START = 10
     RIGHT_ARM_END = 16
 
+    # Parallel-gripper aperture limits (meters) for the gripper slot of the action.
+    # The gripper is a PDJointPosMimicController taking an absolute position in
+    # [0, 0.042] m (0 = closed, 0.042 = fully open ~84 mm aperture).
+    GRIPPER_CLOSED_M = 0.0
+    GRIPPER_OPEN_M = 0.037
+    GRIPPER_STEP_M = 0.006
+
     def __init__(self, config: TeleopConfig = None, robot_variant: str = "aloha_mini_so100_v2"):
         """
         Initialize the teleoperation controller.
@@ -180,7 +187,11 @@ class TeleopController:
         # Direct controls (no IK needed)
         arm.joint1_deg += delta['joint1_delta']
         arm.joint5_deg += delta['wrist_roll_delta']
-        arm.joint6_deg += delta['gripper_delta']
+        # Gripper: adjust the parallel-gripper aperture (meters), not joint6 degrees.
+        if abs(delta['gripper_delta']) > 1e-9:
+            step = self.GRIPPER_STEP_M * (1.0 if delta['gripper_delta'] > 0 else -1.0)
+            arm.gripper_pos_m = float(np.clip(
+                arm.gripper_pos_m + step, self.GRIPPER_CLOSED_M, self.GRIPPER_OPEN_M))
 
         # Update position and pitch
         arm.ee_x += delta['ee_x_delta']
@@ -248,11 +259,12 @@ class TeleopController:
         if goal.wrist_roll_deg is not None:
             arm.joint5_deg = goal.wrist_roll_deg
 
-        # Update gripper
+        # Update gripper (parallel-gripper aperture in meters; 0=closed, 0.042=open)
         if goal.gripper_closed is not None:
             arm.gripper_closed = goal.gripper_closed
-            # Open = 0° (home position), Close = -90° (original value)
-            arm.joint6_deg = -90.0 if goal.gripper_closed else 0.0
+            arm.gripper_pos_m = (
+                self.GRIPPER_CLOSED_M if goal.gripper_closed else self.GRIPPER_OPEN_M
+            )
 
     def reset_arms(self):
         """Reset both arms to initial positions."""
@@ -324,6 +336,12 @@ class TeleopController:
         # Sequential format: all left arm joints, then all right arm joints
         action[self.LEFT_ARM_START:self.LEFT_ARM_END] = left_joints
         action[self.RIGHT_ARM_START:self.RIGHT_ARM_END] = right_joints
+
+        # Override each arm's gripper slot: the parallel gripper is a mimic
+        # controller expecting an aperture in meters [0, 0.042] (0=closed), NOT the
+        # old revolute radians produced by get_joint_positions_rad()'s 6th element.
+        action[self.LEFT_ARM_END - 1] = self.left_arm.gripper_pos_m
+        action[self.RIGHT_ARM_END - 1] = self.right_arm.gripper_pos_m
 
         return action
 

@@ -1,0 +1,149 @@
+"""
+AlohaMini **Pro** (6-DOF arm) agent with the roboninecom parallel gripper.
+
+Same parallel gripper + mimic controller + grasp check as the 5-DOF Std variant
+(`aloha_mini_so100_v2.AlohaMiniSO100V2`), but built on the original AlohaMini
+6-DOF arm (`left/right_joint1..6`). The gripper (palm `*_Fixed_Jaw` + two clamp
+fingers) is grafted onto `*_link6` (see tools/build_pro_urdf.py); joint6 acts as
+the tool roll, exactly like `wrist_roll` on the 5-DOF arm.
+
+Active-joint (qpos) order, 20 DOF — SAPIEN interleaves the two arms:
+  0-2   base:  root_x, root_y, root_z
+  3     lift:  vertical_move
+  4-15  arms (interleaved): L1,R1, L2,R2, L3,R3, L4,R4, L5,R5, L6,R6
+  16-17 left fingers:  left_finger_joint1, left_finger_joint2
+  18-19 right fingers: right_finger_joint1, right_finger_joint2
+"""
+from pathlib import Path
+
+import numpy as np
+import sapien
+
+from mani_skill.agents.base_agent import Keyframe
+from mani_skill.agents.registration import register_agent
+
+from .aloha_mini_so100_v2 import AlohaMiniSO100V2
+from .base_agent import AlohaMiniBaseAgent
+
+
+@register_agent()
+class AlohaMiniProV2(AlohaMiniSO100V2):
+    """AlohaMini Pro: 6-DOF arms + parallel grippers (inherits Std gripper stack)."""
+
+    uid = "aloha_mini_pro_v2"
+    urdf_path = str(Path.home() / ".maniskill/data/robots/aloha_mini/aloha_mini_pro_v2.urdf")
+
+    keyframes = dict(
+        rest=Keyframe(
+            qpos=np.array([
+                0.0, 0.0, 0.0,                        # base: root_x, root_y, root_z
+                0.0,                                  # lift
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,         # arms interleaved L1,R1,L2,R2,L3,R3
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,         # arms interleaved L4,R4,L5,R5,L6,R6
+                0.0, 0.0,                             # left fingers (closed)
+                0.0, 0.0,                             # right fingers (closed)
+            ]),
+            pose=sapien.Pose(p=[0, 0, 0]),
+        ),
+        ready=Keyframe(
+            qpos=np.array([
+                0.0, 0.0, 0.0,
+                0.05,                                 # lift
+                # interleaved: L1,R1, L2,R2, L3,R3, L4,R4, L5,R5, L6,R6
+                0.0, 0.0, 0.5, 0.5, -0.6, -0.6, 0.3, 0.3, 0.0, 0.0, 0.0, 0.0,
+                0.037, 0.037,                         # left fingers (open)
+                0.037, 0.037,                         # right fingers (open)
+            ]),
+            pose=sapien.Pose(p=[0, 0, 0]),
+        ),
+    )
+
+    def __init__(self, *args, **kwargs):
+        # 6-DOF arms (Pro). Everything else (gripper joints, controller gains,
+        # mimic gripper, grasp check, cameras) is inherited from the Std agent.
+        self.left_arm_joint_names = [
+            "left_joint1", "left_joint2", "left_joint3",
+            "left_joint4", "left_joint5", "left_joint6",
+        ]
+        self.right_arm_joint_names = [
+            "right_joint1", "right_joint2", "right_joint3",
+            "right_joint4", "right_joint5", "right_joint6",
+        ]
+        self.arm_joint_names = self.left_arm_joint_names + self.right_arm_joint_names
+
+        self.left_gripper_joint_names = ["left_finger_joint1", "left_finger_joint2"]
+        self.right_gripper_joint_names = ["right_finger_joint1", "right_finger_joint2"]
+
+        # Moderate, STABLE PD gains. The gripper masses are trimmed to realistic values
+        # (see tools/build_pro_urdf.py) so the arm no longer sags much at these gains,
+        # and 100 Hz-sim numerical stability requires keeping stiffness well below the
+        # ~1e4 range where the coupled stiff arm+base rings/blows up.
+        self.arm_stiffness = 2e3
+        self.arm_damping = 4e2
+        self.arm_force_limit = 300
+
+        self.gripper_stiffness = 1e3
+        self.gripper_damping = 1e2
+        self.gripper_force_limit = 15.0
+
+        # Base + lift: modestly firmer than the Std defaults (heavier arm) but still in
+        # the numerically-stable range. Set before base-agent init; the create_* override
+        # below makes the base gains timing-independent.
+        self.base_pos_stiffness = 2e4
+        self.base_pos_damping = 2e3
+        self.base_pos_force_limit = 4000
+        self.lift_stiffness = 4e3
+        self.lift_damping = 6e2
+        self.lift_force_limit = 400
+
+        # Skip AlohaMiniSO100V2.__init__ (it hardcodes the 5-DOF names); go straight
+        # to the shared base-agent initializer.
+        AlohaMiniBaseAgent.__init__(self, *args, **kwargs)
+
+    def _create_base_pos_controller(self):
+        from mani_skill.agents.controllers import PDJointPosControllerConfig
+        return PDJointPosControllerConfig(
+            self.base_joint_names, lower=None, upper=None,
+            stiffness=2e4, damping=2e3, force_limit=4000, normalize_action=False,
+        )
+
+    def _create_lift_pos_controller(self):
+        from mani_skill.agents.controllers import PDJointPosControllerConfig
+        return PDJointPosControllerConfig(
+            self.lift_joint_names, lower=self.LIFT_LOWER, upper=self.LIFT_UPPER,
+            stiffness=4e3, damping=6e2, force_limit=400, normalize_action=False,
+        )
+
+    # per-side bits used to disable gripper<->arm self-collision (see _after_init)
+    _LEFT_ARM_GRIP_BIT = 25
+    _RIGHT_ARM_GRIP_BIT = 26
+    # bit shared with the table/floor actors so the floor-standing base body (which must
+    # sit close to reach the tabletop with the shorter 6-DOF arm) does not collide with
+    # the table slab/legs. The env tags the table actors with the same bit.
+    BASE_TABLE_BIT = 24
+    BASE_BODY_LINKS = ("root", "root_x_link", "root_y_link", "base_link",
+                       "wheel1", "wheel2", "wheel3", "vertical_link",
+                       "left_base", "right_base")
+
+    def _after_init(self):
+        # Sets up palm/finger links + finger-finger collision bits (Std logic).
+        super()._after_init()
+        # The parallel gripper is grafted onto link6; its palm/clamp meshes overlap
+        # the wrist links, so disable collision between the whole gripper subtree and
+        # the arm on each side (the gripper is rigidly attached -> such contacts are
+        # spurious and blow up the sim). Fingers still collide with objects.
+        robot_links = {l.name: l for l in self.robot.get_links()}
+        for side, bit in (("left", self._LEFT_ARM_GRIP_BIT),
+                          ("right", self._RIGHT_ARM_GRIP_BIT)):
+            group = [f"{side}_link{i}" for i in range(1, 7)]
+            group += [f"{side}_Fixed_Jaw", f"{side}_finger1", f"{side}_finger2",
+                      f"{side}_finger1_tip", f"{side}_finger2_tip"]
+            for name in group:
+                link = robot_links.get(name)
+                if link is not None:
+                    link.set_collision_group_bit(group=2, bit_idx=bit, bit=1)
+        # base-body links share BASE_TABLE_BIT with the table/floor (env tags those too)
+        for name in self.BASE_BODY_LINKS:
+            link = robot_links.get(name)
+            if link is not None:
+                link.set_collision_group_bit(group=2, bit_idx=self.BASE_TABLE_BIT, bit=1)

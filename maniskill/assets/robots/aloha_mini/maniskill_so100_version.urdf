@@ -361,36 +361,35 @@
     <limit lower="-1.8" upper="1.8" effort="0" velocity="0" />
   </joint>
 
+  <!-- ===== Left gripper body = roboninecom SO-ARM101 link5_1 (wrist) =====
+       Real GPL-3.0 parallel-gripper assets from
+       github.com/roboninecom/SO-ARM100-101-Parallel-Gripper (see clamp_meshes/).
+       Kept under the AlohaMini link name `left_Fixed_Jaw` so the agent (cameras,
+       wrist_roll child, grasp checks) is unchanged. Origins are verbatim from
+       so_101.urdf.xacro (link5_1 frame); meshes are in mm (scale 0.001). -->
   <link name="left_Fixed_Jaw">
     <inertial>
-      <origin xyz="0.00552376906426563 -0.0280167153359021 0.000483582592841092" rpy="0 0 0" />
-      <mass value="0.0929859131176897" />
-      <inertia ixx="4.3328249304211E-05" ixy="7.09654328670947E-06" ixz="5.99838530879484E-07"
-               iyy="3.04451747368212E-05" iyz="-1.58743247545413E-07" izz="5.02460913506734E-05" />
+      <origin xyz="-0.000584 -0.041539 0.015056" rpy="0 0 0"/>
+      <mass value="0.556172"/>
+      <inertia ixx="0.000579" iyy="0.000983" izz="0.000737" ixy="1e-06" iyz="-8.4e-05" ixz="-5e-06"/>
     </inertial>
-    <visual name="left_fixed_jaw_chassis">
-      <origin xyz="0 0 0" rpy="0 0 0" />
+    <visual name="left_gripper_body">
+      <origin xyz="-0.007062 0.120627 -0.152066" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Fixed_Jaw.stl" />
+        <mesh filename="clamp_meshes/link5_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-      <material name="white" />
-    </visual>
-    <visual name="left_fixed_jaw_motor">
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="so100_meshes/Fixed_Jaw_Motor.stl" />
-      </geometry>
-      <material name="motor" />
+      <material name="white"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="-0.007062 0.120627 -0.152066" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Fixed_Jaw.stl" />
+        <mesh filename="clamp_meshes/link5_1_collision.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
 
   <joint name="left_wrist_roll" type="revolute">
+    <!-- Mounts the roboninecom gripper body on the AlohaMini wrist. TUNABLE. -->
     <origin xyz="0 -0.0601 0" rpy="0 1.5708 0" />
     <parent link="left_Wrist_Pitch_Roll" />
     <child link="left_Fixed_Jaw" />
@@ -398,50 +397,88 @@
     <limit lower="-3.14159" upper="3.14159" effort="0" velocity="0" />
   </joint>
 
-  <link name="left_Moving_Jaw">
+  <!-- ===== Left parallel gripper: roboninecom clamps (real meshes) =====
+       clamp_1 = right_clamp, clamp_2 = left_clamp. In so_101 they share one axis
+       with left_clamp mimic*-1; here finger2's axis is NEGATED so the agent's
+       existing mimic (multiplier +1) opens both jaws symmetrically. qpos 0 =
+       closed (CAD pose), qpos 0.037 = fully open (~74 mm stroke). -->
+  <link name="left_finger1">  <!-- = clamp_1 -->
     <inertial>
-      <origin xyz="-0.00161744605468241 -0.0303472584046471 0.000449645961853651" rpy="0 0 0" />
-      <mass value="0.0202443794940372" />
-      <inertia ixx="1.10911325081525E-05" ixy="-5.35076503033314E-07" ixz="-9.46105662101403E-09"
-               iyy="3.03576451001973E-06" iyz="-1.71146075110632E-07" izz="8.9916083370498E-06" />
+      <origin xyz="0.060170 0.144807 0.184483" rpy="0 0 0"/>
+      <mass value="0.153812"/>
+      <inertia ixx="8.6e-05" iyy="4.1e-05" izz="7.3e-05" ixy="-1e-06" iyz="4e-06" ixz="-2e-06"/>
     </inertial>
-    <visual name="left_moving_jaw_chassis">
-      <origin xyz="0 0 0" rpy="0 0 0" />
+    <visual name="left_clamp1">
+      <origin xyz="0.045072 0.340704 0.033971" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Moving_Jaw.stl" />
+        <mesh filename="clamp_meshes/clamp_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-      <material name="white" />
+      <material name="white"/>
     </visual>
+    <!-- Collision = flat box pad, offset OUTBOARD of the jaw tip so its inner
+         face sits at the tip (grasp contact line). This gives a clean face-face
+         contact with a grasped object and avoids the deep convex-hull penetration
+         (which ejected objects on lift). Detailed clamp mesh kept as the visual. -->
     <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="0.062 0.129 0.186" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Moving_Jaw.stl" />
+        <box size="0.02 0.055 0.045"/>
       </geometry>
     </collision>
   </link>
 
-  <joint name="left_gripper" type="revolute">
-    <origin xyz="-0.0202 -0.0244 0" rpy="0 3.14159 -0.9" />
-    <parent link="left_Fixed_Jaw" />
-    <child link="left_Moving_Jaw" />
-    <axis xyz="0 0 1" />
-    <limit lower="-1.1" upper="1.1" effort="0" velocity="0" />
-  </joint>
-
-  <!-- Left arm tip links -->
-  <joint name="left_Fixed_Jaw_tip_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0.01 -0.097 0"/>
+  <joint name="left_finger_joint1" type="prismatic">  <!-- = right_clamp -->
+    <origin xyz="-0.052134 -0.220077 -0.186037" rpy="0 0 0"/>
     <parent link="left_Fixed_Jaw"/>
-    <child link="left_Fixed_Jaw_tip"/>
+    <child link="left_finger1"/>
+    <axis xyz="0.999848 -0.000154 0.017451"/>
+    <limit lower="0.0" upper="0.037" effort="50" velocity="0.05"/>
   </joint>
-  <link name="left_Fixed_Jaw_tip" />
 
-  <joint name="left_Moving_Jaw_tip_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="-0.01 -0.073 0"/>
-    <parent link="left_Moving_Jaw"/>
-    <child link="left_Moving_Jaw_tip"/>
+  <link name="left_finger2">  <!-- = clamp_2 -->
+    <inertial>
+      <origin xyz="-0.080004 0.147010 0.185068" rpy="0 0 0"/>
+      <mass value="0.153812"/>
+      <inertia ixx="8.6e-05" iyy="4.1e-05" izz="7.3e-05" ixy="1e-06" iyz="-4e-06" ixz="-2e-06"/>
+    </inertial>
+    <visual name="left_clamp2">
+      <origin xyz="-0.07989 0.342905 0.031809" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="clamp_meshes/clamp_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.083 0.131 0.184" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.055 0.045"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_finger_joint2" type="prismatic">  <!-- = left_clamp (axis negated, see note) -->
+    <origin xyz="0.072828 -0.222278 -0.183875" rpy="0 0 0"/>
+    <parent link="left_Fixed_Jaw"/>
+    <child link="left_finger2"/>
+    <axis xyz="-0.999848 0.000154 -0.017451"/>
+    <limit lower="0.0" upper="0.037" effort="50" velocity="0.05"/>
   </joint>
-  <link name="left_Moving_Jaw_tip" />
+
+  <!-- Tips at the gripper grasp center (TCP = midpoint). Closed-pose values so
+       both tips coincide at the center when qpos=0. -->
+  <joint name="left_finger1_tip_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.051981 0.1288995 0.186081"/>
+    <parent link="left_finger1"/>
+    <child link="left_finger1_tip"/>
+  </joint>
+  <link name="left_finger1_tip" />
+
+  <joint name="left_finger2_tip_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.072981 0.1311005 0.183919"/>
+    <parent link="left_finger2"/>
+    <child link="left_finger2_tip"/>
+  </joint>
+  <link name="left_finger2_tip" />
 
   <!-- ========== RIGHT ARM (Official ManiSkill SO100) ========== -->
   <!-- Position: negative X (like aloha_mini_virtual_base.urdf) -->
@@ -630,31 +667,25 @@
     <limit lower="-1.8" upper="1.8" effort="0" velocity="0" />
   </joint>
 
+  <!-- ===== Right gripper body = roboninecom SO-ARM101 link5_1 (wrist) =====
+       Mirror of the left arm; same real GPL-3.0 clamp assets (clamp_meshes/). -->
   <link name="right_Fixed_Jaw">
     <inertial>
-      <origin xyz="0.00552376906426563 -0.0280167153359021 0.000483582592841092" rpy="0 0 0" />
-      <mass value="0.0929859131176897" />
-      <inertia ixx="4.3328249304211E-05" ixy="7.09654328670947E-06" ixz="5.99838530879484E-07"
-               iyy="3.04451747368212E-05" iyz="-1.58743247545413E-07" izz="5.02460913506734E-05" />
+      <origin xyz="-0.000584 -0.041539 0.015056" rpy="0 0 0"/>
+      <mass value="0.556172"/>
+      <inertia ixx="0.000579" iyy="0.000983" izz="0.000737" ixy="1e-06" iyz="-8.4e-05" ixz="-5e-06"/>
     </inertial>
-    <visual name="right_fixed_jaw_chassis">
-      <origin xyz="0 0 0" rpy="0 0 0" />
+    <visual name="right_gripper_body">
+      <origin xyz="-0.007062 0.120627 -0.152066" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Fixed_Jaw.stl" />
+        <mesh filename="clamp_meshes/link5_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-      <material name="white" />
-    </visual>
-    <visual name="right_fixed_jaw_motor">
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="so100_meshes/Fixed_Jaw_Motor.stl" />
-      </geometry>
-      <material name="motor" />
+      <material name="white"/>
     </visual>
     <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="-0.007062 0.120627 -0.152066" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Fixed_Jaw.stl" />
+        <mesh filename="clamp_meshes/link5_1_collision.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
   </link>
@@ -667,49 +698,83 @@
     <limit lower="-3.14159" upper="3.14159" effort="0" velocity="0" />
   </joint>
 
-  <link name="right_Moving_Jaw">
+  <!-- ===== Right parallel gripper: roboninecom clamps (real meshes) =====
+       Same as the left arm; finger2 axis negated so the agent's mimic (+1) opens
+       both jaws. qpos 0 = closed (CAD pose), qpos 0.037 = fully open. -->
+  <link name="right_finger1">  <!-- = clamp_1 -->
     <inertial>
-      <origin xyz="-0.00161744605468241 -0.0303472584046471 0.000449645961853651" rpy="0 0 0" />
-      <mass value="0.0202443794940372" />
-      <inertia ixx="1.10911325081525E-05" ixy="-5.35076503033314E-07" ixz="-9.46105662101403E-09"
-               iyy="3.03576451001973E-06" iyz="-1.71146075110632E-07" izz="8.9916083370498E-06" />
+      <origin xyz="0.060170 0.144807 0.184483" rpy="0 0 0"/>
+      <mass value="0.153812"/>
+      <inertia ixx="8.6e-05" iyy="4.1e-05" izz="7.3e-05" ixy="-1e-06" iyz="4e-06" ixz="-2e-06"/>
     </inertial>
-    <visual name="right_moving_jaw_chassis">
-      <origin xyz="0 0 0" rpy="0 0 0" />
+    <visual name="right_clamp1">
+      <origin xyz="0.045072 0.340704 0.033971" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Moving_Jaw.stl" />
+        <mesh filename="clamp_meshes/clamp_1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-      <material name="white" />
+      <material name="white"/>
     </visual>
+    <!-- Collision = flat box pad, offset OUTBOARD of the jaw tip so its inner
+         face sits at the tip (grasp contact line). This gives a clean face-face
+         contact with a grasped object and avoids the deep convex-hull penetration
+         (which ejected objects on lift). Detailed clamp mesh kept as the visual. -->
     <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="0.062 0.129 0.186" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="so100_meshes/Moving_Jaw.stl" />
+        <box size="0.02 0.055 0.045"/>
       </geometry>
     </collision>
   </link>
 
-  <joint name="right_gripper" type="revolute">
-    <origin xyz="-0.0202 -0.0244 0" rpy="0 3.14159 -0.9" />
-    <parent link="right_Fixed_Jaw" />
-    <child link="right_Moving_Jaw" />
-    <axis xyz="0 0 1" />
-    <limit lower="-1.1" upper="1.1" effort="0" velocity="0" />
-  </joint>
-
-  <!-- Right arm tip links -->
-  <joint name="right_Fixed_Jaw_tip_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="0.01 -0.097 0"/>
+  <joint name="right_finger_joint1" type="prismatic">  <!-- = right_clamp -->
+    <origin xyz="-0.052134 -0.220077 -0.186037" rpy="0 0 0"/>
     <parent link="right_Fixed_Jaw"/>
-    <child link="right_Fixed_Jaw_tip"/>
+    <child link="right_finger1"/>
+    <axis xyz="0.999848 -0.000154 0.017451"/>
+    <limit lower="0.0" upper="0.037" effort="50" velocity="0.05"/>
   </joint>
-  <link name="right_Fixed_Jaw_tip" />
 
-  <joint name="right_Moving_Jaw_tip_joint" type="fixed">
-    <origin rpy="0 0 0" xyz="-0.01 -0.073 0"/>
-    <parent link="right_Moving_Jaw"/>
-    <child link="right_Moving_Jaw_tip"/>
+  <link name="right_finger2">  <!-- = clamp_2 -->
+    <inertial>
+      <origin xyz="-0.080004 0.147010 0.185068" rpy="0 0 0"/>
+      <mass value="0.153812"/>
+      <inertia ixx="8.6e-05" iyy="4.1e-05" izz="7.3e-05" ixy="1e-06" iyz="-4e-06" ixz="-2e-06"/>
+    </inertial>
+    <visual name="right_clamp2">
+      <origin xyz="-0.07989 0.342905 0.031809" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="clamp_meshes/clamp_2.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+    <collision>
+      <origin xyz="-0.083 0.131 0.184" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.02 0.055 0.045"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_finger_joint2" type="prismatic">  <!-- = left_clamp (axis negated) -->
+    <origin xyz="0.072828 -0.222278 -0.183875" rpy="0 0 0"/>
+    <parent link="right_Fixed_Jaw"/>
+    <child link="right_finger2"/>
+    <axis xyz="-0.999848 0.000154 -0.017451"/>
+    <limit lower="0.0" upper="0.037" effort="50" velocity="0.05"/>
   </joint>
-  <link name="right_Moving_Jaw_tip" />
+
+  <joint name="right_finger1_tip_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0.051981 0.1288995 0.186081"/>
+    <parent link="right_finger1"/>
+    <child link="right_finger1_tip"/>
+  </joint>
+  <link name="right_finger1_tip" />
+
+  <joint name="right_finger2_tip_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.072981 0.1311005 0.183919"/>
+    <parent link="right_finger2"/>
+    <child link="right_finger2_tip"/>
+  </joint>
+  <link name="right_finger2_tip" />
 
 </robot>

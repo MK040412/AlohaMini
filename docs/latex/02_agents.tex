@@ -1,0 +1,314 @@
+% 02_agents.tex - Robot Agents Module
+% AlohaMini Codebase Documentation
+
+\section{Agents Module}
+
+% ============================================
+% SLIDE: Module Overview
+% ============================================
+\begin{frame}{agents/aloha\_mini/ Module}
+\begin{columns}
+\begin{column}{0.45\textwidth}
+    \textbf{Purpose:} Define robot agents for ManiSkill3 simulation
+
+    \vspace{0.3cm}
+
+    \textbf{Files:}
+    \begin{itemize}
+        \item \filepath{base\_agent.py} (208 lines)
+        \item \filepath{aloha\_mini\_so100\_v2.py} (351 lines)
+        \item \filepath{\_\_init\_\_.py}
+    \end{itemize}
+\end{column}
+\begin{column}{0.55\textwidth}
+    \centering
+    \begin{tikzpicture}[scale=0.75, transform shape]
+        % ManiSkill BaseAgent (top)
+        \node[submodule, text width=3cm] (maniskill) at (0,3) {\scriptsize mani\_skill.BaseAgent};
+
+        % AlohaMiniBase (middle)
+        \node[class, text width=3cm] (base) at (0,1.5) {
+            \textbf{AlohaMiniBase}\\
+            \scriptsize (Abstract)
+        };
+
+        % SO100V2 (bottom)
+        \node[class, text width=2.8cm] (so100) at (0,0) {
+            SO100V2\\
+            \scriptsize (16 DOF)
+        };
+
+        % Inheritance arrows - directly connected
+        \draw[arrow] (base) -- (maniskill);
+        \draw[arrow] (so100) -- (base);
+    \end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: base_agent.py Overview
+% ============================================
+\begin{frame}[fragile]{base\_agent.py - Base Class}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+class AlohaMiniBaseAgent(BaseAgent):
+    """Base agent for variants."""
+    BASE_JOINT_NAMES = [
+        "root_x_axis_joint",
+        "root_y_axis_joint",
+        "root_z_rotation_joint",
+    ]
+    LIFT_JOINT_NAMES = ["vertical_move"]
+
+    @abstractmethod
+    def get_left_ee_pose(self): pass
+
+    @abstractmethod
+    def get_right_ee_pose(self): pass
+\end{lstlisting}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Common Functionality:}
+    \begin{itemize}
+        \item Joint name definitions
+        \item Controller parameter defaults
+        \item \code{\_create\_base\_controller()}
+        \item \code{is\_grasping()} (Template Method)
+        \item \code{is\_static()}
+    \end{itemize}
+
+    \vspace{0.2cm}
+
+    \begin{block}{Design Pattern}
+    \footnotesize\textbf{Template Method}: \code{is\_grasping()} calls abstract \code{\_check\_single\_arm\_grasping()}
+    \end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Controller Helper Methods
+% ============================================
+\begin{frame}[fragile]{base\_agent.py - Controller Helpers}
+\begin{lstlisting}
+def _create_base_controller(self):
+    """Create PDBaseVelController for virtual mobile base."""
+    return PDBaseVelControllerConfig(
+        self.base_joint_names,
+        lower=[-1, -1, -3.14],    # [vx, vy, omega]
+        upper=[1, 1, 3.14],
+        damping=self.base_damping,        # 1000
+        force_limit=self.base_force_limit, # 500
+    )
+
+def _create_lift_pos_controller(self):
+    """Create position controller for lift mechanism."""
+    return PDJointPosControllerConfig(
+        self.lift_joint_names,
+        stiffness=self.lift_stiffness,    # 2e3
+        damping=self.lift_damping,        # 2e2
+        force_limit=self.lift_force_limit, # 150
+        normalize_action=False,
+    )
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: is_grasping Template Method
+% ============================================
+\begin{frame}[fragile]{base\_agent.py - Grasping Detection}
+\begin{lstlisting}
+def is_grasping(self, object: Actor, min_force=0.5,
+                max_angle=110, arm_id=None):
+    """Check if robot is grasping an object."""
+    if arm_id is None:
+        # Check both arms
+        arm1 = self._check_single_arm_grasping(
+            object, min_force, max_angle, arm_id=1)
+        arm2 = self._check_single_arm_grasping(
+            object, min_force, max_angle, arm_id=2)
+        return torch.logical_or(arm1, arm2)
+    else:
+        return self._check_single_arm_grasping(
+            object, min_force, max_angle, arm_id)
+
+@abstractmethod
+def _check_single_arm_grasping(self, object, ...):
+    """Implemented by subclass (different gripper structures)"""
+    pass
+\end{lstlisting}
+
+\begin{block}{Note}
+Different gripper structures require different contact force calculations.
+\end{block}
+\end{frame}
+
+% ============================================
+% SLIDE: aloha_mini_so100_v2.py Overview
+% ============================================
+\begin{frame}{aloha\_mini\_so100\_v2.py - SO100 Variant}
+\begin{columns}
+\begin{column}{0.5\textwidth}
+    \textbf{Configuration:}
+    \begin{itemize}
+        \item \code{uid = "aloha\_mini\_so100\_v2"}
+        \item Virtual base (prismatic X/Y)
+        \item 16 DOF total
+        \item SO100 arm design
+    \end{itemize}
+
+    \vspace{0.3cm}
+
+    \textbf{Joint Names:}
+    \begin{itemize}
+        \item \code{left\_shoulder\_pan/lift}
+        \item \code{elbow\_flex}, \code{wrist\_flex}
+        \item \code{wrist\_roll}, \code{gripper}
+    \end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+    \textbf{Controller Parameters:}
+    \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{lr}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    arm\_stiffness & 3e3 \\
+    arm\_damping & 2e2 \\
+    arm\_force\_limit & 100 N \\
+    gripper\_stiffness & 100 \\
+    \bottomrule
+    \end{tabular}
+    \end{table}
+
+    \vspace{0.3cm}
+
+    \textbf{Cameras:}
+    \begin{itemize}
+        \item cam\_main (320$\times$240)
+        \item cam\_left\_wrist (128$\times$128)
+        \item cam\_right\_wrist (128$\times$128)
+    \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ============================================
+% SLIDE: Keyframes
+% ============================================
+\begin{frame}[fragile]{Keyframes Configuration}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+keyframes = dict(
+    rest=Keyframe(
+        qpos=np.array([
+            0.0, 0.0, 0.0,  # Base: x, y, rotation
+            0.0,            # Lift
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  # Left arm
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0,  # Right arm
+        ]),
+        pose=sapien.Pose(p=[0, 0, 0]),
+    ),
+    ready=Keyframe(
+        qpos=np.array([
+            0.0, 0.0, 0.0, 0.05,           # base + lift
+            0.0, 0.3, -0.3, 0.0, 0.3, 0.0, # left
+            0.0, 0.3, -0.3, 0.0, 0.3, 0.0, # right
+        ]),
+    ),
+)
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: Camera Configuration
+% ============================================
+\begin{frame}[fragile]{Camera Setup}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+@property
+def _sensor_configs(self):
+    q_main = euler_to_quat_xyz(
+        math.radians(90), math.radians(90), 0)  # overhead
+    q_wrist = euler_to_quat_xyz(
+        0, math.radians(45), math.radians(-90)) # 45deg down
+
+    return [
+        CameraConfig(uid="cam_main",
+            pose=Pose.create_from_pq(p=[0.0, 0.0, 1.45], q=q_main),
+            width=320, height=240, fov=1.5, entity_uid="base_link"),
+        CameraConfig(uid="cam_left_wrist",
+            pose=Pose.create_from_pq(p=[0.0, 0.0, 0.15], q=q_wrist),
+            width=128, height=128, fov=1.3, entity_uid="left_link4"),
+    ]
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: SO100 Grasping Detection
+% ============================================
+\begin{frame}[fragile]{Grasping Detection}
+\begin{lstlisting}
+def _check_single_arm_grasping(self, object, min_force=0.5,
+                                max_angle=110, arm_id=1):
+    """SO100 style: two-finger grasping detection."""
+    finger1_link = self.left_finger1_link  # Fixed_Jaw
+    finger2_link = self.left_finger2_link  # Moving_Jaw
+
+    l_contact = self.scene.get_pairwise_contact_forces(
+        finger1_link, object)
+    r_contact = self.scene.get_pairwise_contact_forces(
+        finger2_link, object)
+
+    lforce = torch.linalg.norm(l_contact, axis=1)
+    rforce = torch.linalg.norm(r_contact, axis=1)
+
+    # Direction to open gripper
+    ldirection = finger1_link.pose.to_transformation_matrix()[..., :3, 1]
+    rdirection = -finger2_link.pose.to_transformation_matrix()[..., :3, 1]
+
+    # Check force and angle thresholds
+    lflag = (lforce >= min_force) & (angle <= max_angle)
+    rflag = (rforce >= min_force) & (angle <= max_angle)
+    return torch.logical_and(lflag, rflag)
+\end{lstlisting}
+\end{frame}
+
+% ============================================
+% SLIDE: Class Diagram Summary
+% ============================================
+\begin{frame}{Agents Module - Class Diagram}
+\centering
+\begin{tikzpicture}[scale=0.7, transform shape]
+    % BaseAgent from ManiSkill
+    \node[class, text width=3cm, fill=green!10] (base) at (0,5) {
+        \footnotesize\textbf{BaseAgent}\\
+        \tiny (mani\_skill)
+    };
+
+    % AlohaMiniBaseAgent
+    \node[class, text width=3.5cm, minimum height=2cm] (aloha) at (0,2.2) {
+        \footnotesize\textbf{AlohaMiniBaseAgent}\\
+        \hrule
+        \tiny BASE\_JOINT\_NAMES\\
+        \tiny LIFT\_JOINT\_NAMES\\
+        \tiny is\_grasping()\\
+        \tiny @abstract get\_ee\_pose()
+    };
+
+    % AlohaMiniSO100V2
+    \node[class, text width=3.2cm, minimum height=1.6cm] (so100) at (0,-0.8) {
+        \footnotesize\textbf{AlohaMiniSO100V2}\\
+        \tiny uid = "aloha\_mini\_so100\_v2"\\
+        \hrule
+        \tiny 16 DOF (base+lift+arms)\\
+        \tiny \_check\_single\_arm\_grasping()
+    };
+
+    % Arrows
+    \draw[arrow] (aloha) -- (base);
+    \draw[arrow] (so100) -- (aloha);
+\end{tikzpicture}
+\end{frame}

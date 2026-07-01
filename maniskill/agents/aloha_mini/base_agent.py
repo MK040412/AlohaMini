@@ -90,6 +90,12 @@ class AlohaMiniBaseAgent(BaseAgent):
         # Default controller parameters for base
         self.base_damping = 1000
         self.base_force_limit = 500
+        # Position controller gains for the fixed-base mode (subclasses with a heavier
+        # arm, e.g. the 6-DOF Pro, raise these so the virtual base does not drift/rotate
+        # under the arm's reaction forces).
+        self.base_pos_stiffness = 1e4
+        self.base_pos_damping = 1e3
+        self.base_pos_force_limit = 2000
 
         super().__init__(*args, **kwargs)
 
@@ -103,12 +109,38 @@ class AlohaMiniBaseAgent(BaseAgent):
             force_limit=self.base_force_limit,
         )
 
-    def _create_lift_pos_controller(self):
-        """Create position controller for the lift mechanism."""
+    def _create_base_pos_controller(self):
+        """Position controller for the virtual base (holds it rigid when commanded).
+
+        Useful for stationary tabletop manipulation / scripted data generation,
+        where the velocity-controlled mobile base would otherwise drift under the
+        arm's reaction forces.
+        """
         return PDJointPosControllerConfig(
-            self.lift_joint_names,
+            self.base_joint_names,
             lower=None,
             upper=None,
+            stiffness=self.base_pos_stiffness,
+            damping=self.base_pos_damping,
+            force_limit=self.base_pos_force_limit,
+            normalize_action=False,
+        )
+
+    # Physical travel of the vertical_move (lift) joint, from the URDF limit
+    # (matches the AlohaMini 0-60 cm lift spec, with a small negative reach).
+    LIFT_LOWER = -0.15
+    LIFT_UPPER = 0.6
+
+    def _create_lift_pos_controller(self):
+        """Create position controller for the lift mechanism.
+
+        The action is clamped to the joint's physical travel so a commanded lift
+        target can never drive the column past its limit.
+        """
+        return PDJointPosControllerConfig(
+            self.lift_joint_names,
+            lower=self.LIFT_LOWER,
+            upper=self.LIFT_UPPER,
             stiffness=self.lift_stiffness,
             damping=self.lift_damping,
             force_limit=self.lift_force_limit,

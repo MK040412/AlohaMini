@@ -87,6 +87,11 @@ class ArmState:
     # Gripper state
     gripper_closed: bool = False
 
+    # Gripper aperture in meters for the parallel gripper (0 = closed, 0.042 = open).
+    # This is the value actually sent to the env action; it replaces the old revolute
+    # joint6_deg (which no longer maps to the prismatic finger joints).
+    gripper_pos_m: float = 0.037
+
     def get_joint_positions_deg(self) -> np.ndarray:
         """Return joint positions in degrees."""
         return np.array([
@@ -115,6 +120,7 @@ class ArmState:
             joint6_deg=self.joint6_deg,
             pitch=self.pitch,
             gripper_closed=self.gripper_closed,
+            gripper_pos_m=self.gripper_pos_m,
         )
 
 

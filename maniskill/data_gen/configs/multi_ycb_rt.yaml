@@ -1,0 +1,75 @@
+num_episodes: 4
+seed: 0
+
+load:
+  name: mani_skill_env_loader
+  env_id: AlohaMiniMultiYCB-v1
+  obs_mode: rgb
+  control_mode: pd_joint_pos_fixed_base
+  render_mode: sensors
+  num_envs: 1
+  sim_backend: auto
+  render_backend: gpu
+  env_kwargs:
+    max_episode_steps: 360
+    object_ids:
+      - 070-b_colored_wood_blocks
+      - 077_rubiks_cube
+      - 012_strawberry
+      - 058_golf_ball
+    object_xy_noise: 0.0
+  domain_randomizer:
+    name: aloha_mini_domain_randomizer
+    enabled: false
+
+planner:
+  name: skill_sequence
+  task: Pick the per-episode target YCB object with the AlohaMini left gripper.
+  arm_dof: 5
+  max_steps: 300
+  objects:
+    - name: target_object
+      actor: target_object
+      target_class: RigidObject
+  regions:
+    - object: target_object
+      target: multi_ycb_table_top
+      random_type: fixed_on_table
+      center: [-0.13, -0.45, 0.70]
+  skills:
+    - name: pick
+      arm: left
+      object_actor: target_object
+      approach_height: 0.10
+      descend_offset: -0.01
+      lift_start: 0.0
+      lift_height: 0.16
+      approach_steps: 30
+      descend_steps: 35
+      close_steps: 45
+      lift_steps: 120
+      hold_steps: 40
+
+render:
+  name: mani_skill_renderer
+  fps: 30
+  shader_pack: rt-fast
+  cameras:
+    - cam_main
+    - cam_left_wrist
+    - cam_right_wrist
+  camera_map:
+    cam_main: head
+    cam_left_wrist: hand_left
+    cam_right_wrist: hand_right
+  missing_camera: black
+
+store:
+  name: lerobot_v21
+  output_dir: data_gen/output/aloha_mini_multiycb
+  dataset_name: aloha_mini_multiycb
+  robot_type: aloha_mini_so100_v2
+  fps: 30
+  overwrite: false
+  chunk_size: 1000
+  video_codec: libx264
