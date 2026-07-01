@@ -27,10 +27,13 @@ solver_position_iteration_count: 128
 solver_velocity_iteration_count: 4
 stabilization_threshold: 0.005
 
-# Joint indices (articulation DOF order from the converted USD)
-left_joint_indices: [4, 5, 6, 7, 8]
-right_joint_indices: [11, 12, 13, 14, 15]
-left_gripper_indices: [9, 10]      # parallel gripper: both fingers driven to same value
+# Joint indices — VERIFIED from the loaded USD articulation (dof_names order is
+# INTERLEAVED L,R,L,R like SAPIEN, not sequential): 3=lift, then pan(L4,R5),
+# lift(L6,R7), elbow(L8,R9), wrist_flex(L10,R11), wrist_roll(L12,R13), then
+# left fingers 14,15 and right fingers 16,17.
+left_joint_indices: [4, 6, 8, 10, 12]
+right_joint_indices: [5, 7, 9, 11, 13]
+left_gripper_indices: [14, 15]     # parallel gripper: both fingers driven to same value
 right_gripper_indices: [16, 17]
 lift_indices: [3]
 
