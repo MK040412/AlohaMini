@@ -55,3 +55,40 @@ Run: `LD_LIBRARY_PATH=<isaacsim>/kit/python/lib/python3.10/site-packages/torch/l
 PYTHONPATH=workflows/simbox <isaacsim>/python.sh launcher.py
 --config configs/simbox/de_plan_and_render_template.yaml
 --load_stage.scene_loader.args.cfg_path=<task> --load_stage.layout_random_generator.args.random_num=1 --debug`
+
+## ROOT CAUSE of the ~534 "Plan did not converge" — FIXED (2026-07-02)
+It was **NOT** physics / collision / reachability / orientation (all red herrings). Every
+grasp target fed to CuRobo had position = **FLT_MAX (3.4028e38)** because the robot was
+placed at **Z = −inf**. Chain: `core/utils/region_sampler.py::A_on_B_region_sampler` sets
+the robot Z from `compute_bbox(robot).min[2]`; **`compute_bbox`
+(`core/utils/usd_geom_utils.py`) returned an EMPTY box (min=+FLT_MAX)** for the robot, so
+`place_pos[2] = tgt_z_max + (obj_local_z − FLT_MAX) + shift_z = −inf`. The robot fell to
+−inf → `left_Base` world Z = −inf → base transform Z = FLT_MAX → every grasp target
+FLT_MAX → nothing could converge. Why the box was empty (two compounding reasons):
+(1) the Isaac `Robot.prim` is the **ArticulationRoot *joint* prim** (`.../aloha_mini/root_joint`),
+whose SIBLINGS — not children — hold the link meshes; (2) Isaac loads the URDF robot's
+visual meshes as **instance proxies AND marks them invisible**, so
+`UsdGeom.Imageable.ComputeWorldBound(default)` skips them.
+
+**FIX = `ide_usd_geom_utils.py` → `core/utils/usd_geom_utils.py`** (drop-in): if the fast
+`ComputeWorldBound(default, render)` path is empty, fall back to a manual union that reads
+each mesh's local **extent/points directly** (ignores visibility), traverses **instance
+proxies** (`Usd.PrimRange(root, Usd.TraverseInstanceProxies(Usd.PrimDefaultPredicate))`),
+and **walks UP to ancestor prims** until geometry is found (root_joint → `/World/task_0/aloha_mini`).
+Note: the token is `UsdGeom.Tokens.render` (NOT `render_`; only `default_` has the underscore).
+After this, the robot is placed on the floor (Z≈−0.006), the base transform is valid, and
+**every grasp target is a real reachable position** — the single fix resolved all 534 failures.
+
+Also move the robot within the 5-DOF arm's ~0.45 m reach (the arm can't reach a target
+0.56 m away): `ide_task_pick_object.yaml` robot region `pos_range` `[0,-0.55,-0.765]` →
+`[-0.20,-0.28,-0.765]` (robot euler is `[0,0,90]`).
+
+**REMAINING (open-ended, same class as the 6-DOF grasp):** with valid, reachable targets,
+CuRobo still can't converge a plan because it enforces the **full 6-DOF grasp pose** and the
+under-actuated **5-DOF SO-100 arm can't achieve the bottle's side-grasp orientations**
+(confirmed: not collision — shrinking CuRobo spheres to 0.006 didn't help; not position —
+selected grasp `[-0.098, 0.08, 0.054]` is 0.14 m, well inside the reach envelope;
+`constrain_grasp_approach` is a linear-approach constraint, not orientation relaxation, so it
+doesn't help). Needs CuRobo pose-cost customization to relax one orientation DOF for the
+under-actuated arm, or pre-filtering grasps to the top-down subset the 5-DOF arm can reach,
+or a custom position+approach IK (as used on the ManiSkill side).

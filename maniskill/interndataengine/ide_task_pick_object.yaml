@@ -24,6 +24,9 @@ tasks:
         name: "aloha_mini"
         robot_config_file: workflows/simbox/core/configs/robots/aloha_mini.yaml
         euler: [0.0, 0.0, 90.0]
+        # 5-DOF SO-100 arm can position + set 2 orientation DOF but not the 3rd;
+        # free rotation about the grasp approach axis so CuRobo can converge.
+        constrain_grasp_approach: true
         left_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0]
         right_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0]
         left_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0]
@@ -62,8 +65,8 @@ tasks:
         random_type: A_on_B_region_sampler
         random_config:
           pos_range: [
-            [0.0, -0.55, -0.765],
-            [0.0, -0.55, -0.765]
+            [-0.20, -0.28, -0.765],
+            [-0.20, -0.28, -0.765]
           ]
           yaw_rotation: [0.0, 0.0]
 
