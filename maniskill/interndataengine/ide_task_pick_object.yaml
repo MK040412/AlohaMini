@@ -11,7 +11,7 @@ tasks:
     neglect_collision_names: ["table"]
 
     # Arena configuration
-    arena_file: workflows/simbox/core/configs/arenas/example.yaml
+    arena_file: workflows/simbox/core/configs/arenas/pick_randomized_arena.yaml
 
     env_map:
       envmap_lib: envmap_lib

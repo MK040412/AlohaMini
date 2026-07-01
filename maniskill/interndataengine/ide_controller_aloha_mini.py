@@ -40,7 +40,10 @@ class AlohaMiniController(TemplateController):
             self._gripper_state = 1.0 if self.robot.right_gripper_state == 1.0 else -1.0
         else:
             raise NotImplementedError("robot_file must contain 'left' or 'right'")
-        self._gripper_joint_position = np.array([1.0])
+        # The parallel gripper has TWO finger joints per arm (gripper_indices=[f1,f2]),
+        # both driven to the same aperture -> two identical values so joint_positions
+        # matches joint_indices (arm5 + grip2 = 7).
+        self._gripper_joint_position = np.array([1.0] * len(self.gripper_indices))
 
     def get_gripper_action(self):
         # AlohaMini parallel gripper stroke per finger is 0..0.037 m (open at 0.037).
