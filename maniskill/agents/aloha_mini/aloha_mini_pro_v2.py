@@ -1,18 +1,20 @@
 """
-AlohaMini **Pro** (6-DOF arm) agent with the roboninecom parallel gripper.
+AlohaMini **Pro** agent: the longer Pro arm with the roboninecom parallel gripper
+REPLACING the original jaw gripper.
 
-Same parallel gripper + mimic controller + grasp check as the 5-DOF Std variant
-(`aloha_mini_so100_v2.AlohaMiniSO100V2`), but built on the original AlohaMini
-6-DOF arm (`left/right_joint1..6`). The gripper (palm `*_Fixed_Jaw` + two clamp
-fingers) is grafted onto `*_link6` (see tools/build_pro_urdf.py); joint6 acts as
-the tool roll, exactly like `wrist_roll` on the 5-DOF arm.
+The source "6-DOF" Pro arm is really 5 arm joints + a jaw: link5 was the original
+gripper body (serrated static jaw) and joint6/link6 the moving hook jaw (verified
+by rendering the meshes). tools/build_pro_urdf.py deletes that original gripper
+and lets joint5 (the wrist ROLL, axis Y along the forearm — roboninecom's
+`link4_to_link5`) drive the parallel-gripper palm `*_Fixed_Jaw` directly, exactly
+mirroring roboninecom's SO-101 kit and our Std SO-100 conversion.
 
-Active-joint (qpos) order, 20 DOF — SAPIEN interleaves the two arms:
+Active-joint (qpos) order, 18 DOF — SAPIEN interleaves the two arms:
   0-2   base:  root_x, root_y, root_z
   3     lift:  vertical_move
-  4-15  arms (interleaved): L1,R1, L2,R2, L3,R3, L4,R4, L5,R5, L6,R6
-  16-17 left fingers:  left_finger_joint1, left_finger_joint2
-  18-19 right fingers: right_finger_joint1, right_finger_joint2
+  4-13  arms (interleaved): L1,R1, L2,R2, L3,R3, L4,R4, L5,R5
+  14-15 left fingers:  left_finger_joint1, left_finger_joint2
+  16-17 right fingers: right_finger_joint1, right_finger_joint2
 """
 from pathlib import Path
 
@@ -39,7 +41,7 @@ class AlohaMiniProV2(AlohaMiniSO100V2):
                 0.0, 0.0, 0.0,                        # base: root_x, root_y, root_z
                 0.0,                                  # lift
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,         # arms interleaved L1,R1,L2,R2,L3,R3
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0,         # arms interleaved L4,R4,L5,R5,L6,R6
+                0.0, 0.0, 0.0, 0.0,                   # arms interleaved L4,R4,L5,R5
                 0.0, 0.0,                             # left fingers (closed)
                 0.0, 0.0,                             # right fingers (closed)
             ]),
@@ -49,8 +51,8 @@ class AlohaMiniProV2(AlohaMiniSO100V2):
             qpos=np.array([
                 0.0, 0.0, 0.0,
                 0.05,                                 # lift
-                # interleaved: L1,R1, L2,R2, L3,R3, L4,R4, L5,R5, L6,R6
-                0.0, 0.0, 0.5, 0.5, -0.6, -0.6, 0.3, 0.3, 0.0, 0.0, 0.0, 0.0,
+                # interleaved: L1,R1, L2,R2, L3,R3, L4,R4, L5,R5
+                0.0, 0.0, 0.5, 0.5, -0.6, -0.6, 0.3, 0.3, 0.0, 0.0,
                 0.037, 0.037,                         # left fingers (open)
                 0.037, 0.037,                         # right fingers (open)
             ]),
@@ -59,15 +61,16 @@ class AlohaMiniProV2(AlohaMiniSO100V2):
     )
 
     def __init__(self, *args, **kwargs):
-        # 6-DOF arms (Pro). Everything else (gripper joints, controller gains,
-        # mimic gripper, grasp check, cameras) is inherited from the Std agent.
+        # 5 arm joints per side (joint5 = wrist roll driving the palm). Everything else
+        # (gripper joints, controller gains, mimic gripper, grasp check, cameras) is
+        # inherited from the Std agent.
         self.left_arm_joint_names = [
             "left_joint1", "left_joint2", "left_joint3",
-            "left_joint4", "left_joint5", "left_joint6",
+            "left_joint4", "left_joint5",
         ]
         self.right_arm_joint_names = [
             "right_joint1", "right_joint2", "right_joint3",
-            "right_joint4", "right_joint5", "right_joint6",
+            "right_joint4", "right_joint5",
         ]
         self.arm_joint_names = self.left_arm_joint_names + self.right_arm_joint_names
 
@@ -141,7 +144,8 @@ class AlohaMiniProV2(AlohaMiniSO100V2):
             # config (TCP ~150 mm high) and every grasp closes on air.
             # vertical_link (the lift column both arms mount on) likewise: its convex
             # hull grazes link2 in low-reach configs (impulse ~28 -> ~17 mm TCP error).
-            group = ["vertical_link", f"{side}_base"] + [f"{side}_link{i}" for i in range(1, 7)]
+            # links 1-4 only: link5/link6 (the original jaw gripper) are deleted.
+            group = ["vertical_link", f"{side}_base"] + [f"{side}_link{i}" for i in range(1, 5)]
             group += [f"{side}_Fixed_Jaw", f"{side}_finger1", f"{side}_finger2",
                       f"{side}_finger1_tip", f"{side}_finger2_tip"]
             for name in group:

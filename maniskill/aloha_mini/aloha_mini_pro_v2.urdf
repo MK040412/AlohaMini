@@ -275,63 +275,12 @@
     <axis xyz="1 0 0" />
     <limit lower="-2.3562" upper="2.3562" effort="50" velocity="3.14159" />
   </joint>
-  <link name="left_link5">
-    <inertial>
-      <origin xyz="8.0839e-05 -0.02634094 -0.00560237" rpy="0 0 0" />
-      <mass value="0.09920476" />
-      <inertia ixx="4.9245e-05" ixy="-2.5338e-07" ixz="-4.2684e-07" iyy="2.7153e-05" iyz="-6.955e-06" izz="3.9139e-05" />
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/left_link5.STL" />
-      </geometry>
-      <material name="light_gray">
-        <color rgba="0.9647 0.9647 0.9529 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/left_link5.STL" />
-      </geometry>
-    </collision>
-  </link>
   <joint name="left_joint5" type="revolute">
     <origin xyz="0.01973839 -0.06179034 -0.00026214" rpy="0 0 0" />
     <parent link="left_link4" />
-    <child link="left_link5" />
+    <child link="left_Fixed_Jaw" />
     <axis xyz="0 1 0" />
-    <limit lower="-2.3562" upper="2.3562" effort="50" velocity="3.14159" />
-  </joint>
-  <link name="left_link6">
-    <inertial>
-      <origin xyz="-0.02040389 -0.00159758 0.02974645" rpy="0 0 0" />
-      <mass value="0.02084541" />
-      <inertia ixx="9.1411e-06" ixy="3.3761e-08" ixz="-1.3002e-07" iyy="1.1431e-05" iyz="6.4278e-07" izz="3.293e-06" />
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/left_link6.STL" />
-      </geometry>
-      <material name="light_gray">
-        <color rgba="0.9647 0.9647 0.9529 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/left_link6.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint name="left_joint6" type="revolute">
-    <origin xyz="0.01877202 -0.02382815 0.02000351" rpy="0 0 0" />
-    <parent link="left_link5" />
-    <child link="left_link6" />
-    <axis xyz="-1 0 0" />
-    <limit lower="-3.14159" upper="3.14159" effort="50" velocity="3.14159" />
+    <limit lower="-3.1416" upper="3.1416" effort="50" velocity="3.14159" />
   </joint>
   <link name="right_base">
     <inertial>
@@ -476,63 +425,12 @@
     <axis xyz="1 0 0" />
     <limit lower="-2.3562" upper="2.3562" effort="50" velocity="3.14159" />
   </joint>
-  <link name="right_link5">
-    <inertial>
-      <origin xyz="8.0840e-05 -0.02634094 -0.00560237" rpy="0 0 0" />
-      <mass value="0.09920475" />
-      <inertia ixx="4.9245e-05" ixy="-2.5338e-07" ixz="-4.2684e-07" iyy="2.7153e-05" iyz="-6.955e-06" izz="3.9139e-05" />
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/right_link5.STL" />
-      </geometry>
-      <material name="light_gray">
-        <color rgba="0.9647 0.9647 0.9529 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/right_link5.STL" />
-      </geometry>
-    </collision>
-  </link>
   <joint name="right_joint5" type="revolute">
     <origin xyz="0.01973839 -0.06179034 -0.00026214" rpy="0 0 0" />
     <parent link="right_link4" />
-    <child link="right_link5" />
+    <child link="right_Fixed_Jaw" />
     <axis xyz="0 1 0" />
-    <limit lower="-2.3562" upper="2.3562" effort="50" velocity="3.14159" />
-  </joint>
-  <link name="right_link6">
-    <inertial>
-      <origin xyz="-0.02040389 -0.00159758 0.02974645" rpy="0 0 0" />
-      <mass value="0.02084541" />
-      <inertia ixx="9.1411e-06" ixy="3.3761e-08" ixz="-1.3002e-07" iyy="1.1431e-05" iyz="6.4278e-07" izz="3.293e-06" />
-    </inertial>
-    <visual>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/right_link6.STL" />
-      </geometry>
-      <material name="light_gray">
-        <color rgba="0.9647 0.9647 0.9529 1" />
-      </material>
-    </visual>
-    <collision>
-      <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/right_link6.STL" />
-      </geometry>
-    </collision>
-  </link>
-  <joint name="right_joint6" type="revolute">
-    <origin xyz="0.01877202 -0.02382815 0.02000351" rpy="0 0 0" />
-    <parent link="right_link5" />
-    <child link="right_link6" />
-    <axis xyz="-1 0 0" />
-    <limit lower="-3.14159" upper="3.14159" effort="50" velocity="3.14159" />
+    <limit lower="-3.1416" upper="3.1416" effort="50" velocity="3.14159" />
   </joint>
   <link name="root">
     <inertial>
@@ -658,11 +556,6 @@
     <parent link="left_finger2" />
     <child link="left_finger2_tip" />
   </joint>
-  <joint name="left_gripper_mount" type="fixed">
-    <origin xyz="0 0 0.045" rpy="1.5708 0 0" />
-    <parent link="left_link6" />
-    <child link="left_Fixed_Jaw" />
-  </joint>
   <link name="right_Fixed_Jaw">
     <inertial>
       <origin xyz="-0.000584 -0.041539 0.015056" rpy="0 0 0" />
@@ -748,10 +641,5 @@
     <origin rpy="0 0 0" xyz="-0.072981 0.1311005 0.183919" />
     <parent link="right_finger2" />
     <child link="right_finger2_tip" />
-  </joint>
-  <joint name="right_gripper_mount" type="fixed">
-    <origin xyz="0 0 0.045" rpy="1.5708 0 0" />
-    <parent link="right_link6" />
-    <child link="right_Fixed_Jaw" />
   </joint>
 </robot>
