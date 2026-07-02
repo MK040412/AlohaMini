@@ -224,9 +224,9 @@ def default_camera_config(shader_pack: str = "minimal") -> dict[str, Any]:
     return dict(
         render_camera=dict(
             pose=camera_pose_list([0.3, -2.6, 2.5], [-2.3, -0.8, 0.85]),
-            width=1280,
-            height=720,
-            fov=1.15,
+            width=1920,
+            height=1080,
+            fov=1.0,
             near=0.01,
             far=100,
             shader_pack=shader_pack,

@@ -57,8 +57,9 @@ NUDGE_EDGE_INSET = 0.14
 NUDGE_TOP_MIN = 0.42
 NUDGE_TOP_MAX = 0.85
 FOLLOW_CAM_INTERIOR = (0.95, -1.67)  # apartment centroid: eye stays between robot and here
-FOLLOW_CAM_DIST = 2.3
-FOLLOW_CAM_HEIGHT = 2.15
+# zoomed-in framing (user request): the robot fills ~2x more of the 1080p frame
+FOLLOW_CAM_DIST = 1.6
+FOLLOW_CAM_HEIGHT = 1.5
 FOLLOW_CAM_SMOOTH = 0.06
 
 PREFERRED_PLACE_SURFACES = [
