@@ -120,19 +120,46 @@ def main():
                 return ((p[0].cpu().numpy() if hasattr(p, "cpu") else np.asarray(p).reshape(-1))[:2]).astype(np.float64)
         return None
 
-    def select_station(target_pt, label):
+    # occupancy grid reused for FREE-SPACE station sampling (same params as A* nav)
+    from data_gen.aspire_engine.nav_planner import OccupancyGrid
+    _g = OccupancyGrid((NAV_BOUNDS[0], NAV_BOUNDS[2]),
+                       (NAV_BOUNDS[1] - NAV_BOUNDS[0], NAV_BOUNDS[3] - NAV_BOUNDS[2]))
+    for ob in NAV_OBSTACLES:
+        _g.add_box(ob["center"], ob["half"], ob.get("margin", 0.0))
+    _g.inflate(NAV_ROBOT_RADIUS)
+
+    def _free(xy):
+        ij = _g.world_to_cell(xy)
+        return _g.in_bounds(ij) and not _g.is_occupied(ij)
+
+    def select_station(target_pt, label, rng=None):
+        """FACING-based station sampling (user request): candidates on a ring around
+        the target, in FREE space, with the robot FRONT (-y at yaw 0, between the two
+        arms) turned toward the object plus a random frontal jitter (~±30 deg) — so
+        the robot approaches face-on from varied frontal angles instead of always
+        grasping over its side."""
+        rng = rng or np.random.default_rng(0)
         jaw_dir = np.array([1.0, 0.0, 0.0], np.float32)
         q0 = qnow()
         rest = skill.current_action_template(env)[lay["left_arm"]].astype(np.float32)
         best = None
-        # arm-base offset from robot root, per yaw (root+R(yaw)@[0.156,-0.041]).
-        # yaw=-90 deg TURNS THE BODY TOWARD the table: the arm base moves 0.156 m south
-        # of the root, so a legal north-edge station still puts the target in easy reach.
-        ARMOFF = {0.0: (0.156, -0.041), -np.pi / 2: (-0.041, -0.156)}
-        for yaw, (ox, oy) in ARMOFF.items():
-            for dx in (-0.10, -0.05, 0.0, 0.05, 0.10):
-                for by in (0.08,):   # WORLD y, outside the inflated table footprint used by A*
-                    bx = float(target_pt[0] - ox + dx)   # WORLD x
+        cands = []
+        for radius in (0.34, 0.40, 0.46):
+            for k in range(12):
+                th = 2 * np.pi * k / 12
+                bx = float(target_pt[0] + radius * np.cos(th))
+                by = float(target_pt[1] + radius * np.sin(th))
+                if not _free((bx, by)):
+                    continue
+                d = np.array([target_pt[0] - bx, target_pt[1] - by], np.float64)
+                d /= np.linalg.norm(d)
+                yaw_face = float(np.arctan2(d[0], -d[1]))   # front(yaw)=R(yaw)@(0,-1)
+                jit = float(rng.choice([-0.5, -0.25, 0.0, 0.25, 0.5]))
+                cands.append((abs(jit), bx, by, yaw_face + jit))
+        cands.sort(key=lambda c: c[0])   # small jitter (most face-on) first
+        for _, bx, by, yaw in cands[:14]:
+            if True:
+                if True:
                     j = w2j((bx, by, yaw))
                     q = q0.copy()
                     q[BASE_IDS[0]], q[BASE_IDS[1]], q[BASE_IDS[2]] = j[0], j[1], j[2]
@@ -170,6 +197,8 @@ def main():
                               f"armbase=({lbp[0]:+.3f},{lbp[1]:+.3f}) dist_xy={d:.3f} ik={r.error:.4f}", flush=True)
                     if best is None or score < best[0]:
                         best = (score, bx, by, yaw, r.arm_qpos.copy(), r.error)
+                    if best is not None and best[0] < 0.004:
+                        break   # face-on station with converged IK — good enough
         set_q(q0)
         if best is None:
             raise RuntimeError(f"no physically-valid station found for {label}")
