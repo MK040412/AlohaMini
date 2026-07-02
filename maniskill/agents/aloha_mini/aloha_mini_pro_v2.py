@@ -135,7 +135,13 @@ class AlohaMiniProV2(AlohaMiniSO100V2):
         robot_links = {l.name: l for l in self.robot.get_links()}
         for side, bit in (("left", self._LEFT_ARM_GRIP_BIT),
                           ("right", self._RIGHT_ARM_GRIP_BIT)):
-            group = [f"{side}_link{i}" for i in range(1, 7)]
+            # include the arm's mounting bracket ({side}_base): IK configs that pitch the
+            # shoulder far (e.g. q2~-1.1 for low tabletop grasps) press link2/link5 into
+            # it — the convex-hull contact then shoves the arm ~0.7 rad off the commanded
+            # config (TCP ~150 mm high) and every grasp closes on air.
+            # vertical_link (the lift column both arms mount on) likewise: its convex
+            # hull grazes link2 in low-reach configs (impulse ~28 -> ~17 mm TCP error).
+            group = ["vertical_link", f"{side}_base"] + [f"{side}_link{i}" for i in range(1, 7)]
             group += [f"{side}_Fixed_Jaw", f"{side}_finger1", f"{side}_finger2",
                       f"{side}_finger1_tip", f"{side}_finger2_tip"]
             for name in group:
