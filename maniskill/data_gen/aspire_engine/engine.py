@@ -156,11 +156,30 @@ def _make_env(command: dict[str, Any], seed: int, cfg: Any):
     return env, pick_xy
 
 
+def _note_failure(cfg: Any, runtime: Any = None, stage: str = "", extra: dict | None = None) -> None:
+    """Fill cfg['failure_sink'] (if provided) so aspire_loop can diagnose the failure.
+
+    ASPIRE-style: on any filtered exit the per-primitive traces + the failing stage
+    are exposed to the agentic repair loop instead of being silently dropped.
+    """
+    sink = _cfg_get(cfg, "failure_sink", None)
+    if not isinstance(sink, dict):
+        return
+    sink["stage"] = stage
+    if extra:
+        sink["extra"] = extra
+    if runtime is not None:
+        sink["traces"] = list(getattr(runtime, "traces", []))
+        failed = next((t for t in reversed(sink["traces"]) if not t.get("ok", True)), None)
+        sink["failed_trace"] = failed
+
+
 def run_episode(command: dict[str, Any], seed: int, cfg: Any) -> dict[str, Any] | None:
     """Run one command. Return None on any filtered execution failure."""
 
     env = None
     command = dict(command)
+    runtime = None
     try:
         env, pick_xy = _make_env(command, seed, cfg)
         env.reset(seed=seed)
@@ -179,10 +198,12 @@ def run_episode(command: dict[str, Any], seed: int, cfg: Any) -> dict[str, Any] 
             # validated invariant that place feasibility never teleports a held object.
             pick_trace = runtime.preselect_station(obj0, "pick", pitch_deg)
             if not pick_trace["ok"]:
+                _note_failure(cfg, runtime, "preselect_pick")
                 return None
             place_pt = np.array([target_xy[0], target_xy[1], obj0[2]], np.float32)
             place_trace = runtime.preselect_station(place_pt, "place", pitch_deg)
             if not place_trace["ok"]:
+                _note_failure(cfg, runtime, "preselect_place")
                 return None
 
         for step in plan:
@@ -206,6 +227,7 @@ def run_episode(command: dict[str, Any], seed: int, cfg: Any) -> dict[str, Any] 
                 trace = {"ok": False, "info": {"skill": skill}, "evidence": {"error": "unknown skill"}}
                 runtime.traces.append(trace)
             if not trace.get("ok", False):
+                _note_failure(cfg, runtime, f"skill:{skill}")
                 return None
 
         objf = actor_position(obj_actor).copy()
@@ -214,6 +236,8 @@ def run_episode(command: dict[str, Any], seed: int, cfg: Any) -> dict[str, Any] 
         if verb == "push":
             success = bool(xy_err <= 0.05)
         if not success:
+            _note_failure(cfg, runtime, "final_check",
+                          {"xy_err": xy_err, "target_xy": target_xy.tolist(), "object_final": objf.tolist()})
             return None
 
         return {
@@ -237,7 +261,8 @@ def run_episode(command: dict[str, Any], seed: int, cfg: Any) -> dict[str, Any] 
                 "num_steps": len(runtime.steps),
             },
         }
-    except Exception:
+    except Exception as exc:
+        _note_failure(cfg, runtime, "exception", {"error": repr(exc)})
         return None
     finally:
         if env is not None:
