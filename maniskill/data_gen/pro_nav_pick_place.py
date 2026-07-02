@@ -31,7 +31,11 @@ W, H = 1280, 720
 
 OBJ = "077_rubiks_cube"
 PITCH = 60.0
-PLACE_XY = np.array([0.10, -0.42], np.float32)   # place target on the table (far from slot 0)
+# Base<->table collision is now ON (no more bit-24 hack), so the base must park OUTSIDE
+# the table footprint (x[-0.43,0.17], y[-0.69,-0.21]). Put the pick object and the place
+# target near the NORTH edge so they are reachable from legal stations.
+PICK_XY = np.array([-0.13, -0.31], np.float32)
+PLACE_XY = np.array([0.06, -0.31], np.float32)
 V_BASE = 0.010     # m/step  (~0.2 m/s)  base translation cap
 OUT = "/home/perelman/AlohaMini/maniskill/data_gen/output/demo_pro"
 os.makedirs(OUT, exist_ok=True)
@@ -63,8 +67,9 @@ def main():
     env = gym.make("AlohaMiniMultiYCB-v1", num_envs=1, obs_mode="state",
                    control_mode="pd_joint_pos_fixed_base", render_mode="rgb_array",
                    reward_mode="none", sim_backend="physx_cpu", object_ids=[OBJ],
-                   robot_uid="aloha_mini_pro_v2", base_xy=(-0.29, -0.10),  # start AWAY from the table
-                   render_eye=[0.55, -1.0, 1.15], render_target=[-0.05, -0.40, 0.80],
+                   robot_uid="aloha_mini_pro_v2", base_xy=(-0.40, 0.18),  # start clearly off-table
+                   slot_override_xy=[tuple(PICK_XY)],
+                   render_eye=[0.60, -1.05, 1.20], render_target=[-0.05, -0.30, 0.80],
                    human_render_camera_configs=dict(shader_pack="rt-fast", width=W, height=H))
     be = env.unwrapped
     env.reset(seed=0)
@@ -82,64 +87,148 @@ def main():
         q = robot.get_qpos()
         return (q[0].cpu().numpy() if hasattr(q, "cpu") else np.asarray(q).reshape(-1)).copy()
 
+    # The root_x/root_y/root_z joints are RELATIVE to the robot's root pose (env base_xy),
+    # not world coordinates. Convert world station coords -> joint targets.
+    rp = robot.pose.p
+    rp = (rp[0].cpu().numpy() if hasattr(rp, "cpu") else np.asarray(rp).reshape(-1))[:2]
+    ROOT_XY = rp.astype(np.float64)
+
+    def w2j(world_xy_yaw):
+        out = np.array(world_xy_yaw, np.float64).copy()
+        out[0] -= ROOT_XY[0]
+        out[1] -= ROOT_XY[1]
+        return out
+
     def set_q(q):
         robot.set_qpos(torch.as_tensor(q[None], dtype=torch.float32))
 
     # ---------------- FEASIBILITY: ASPIRE multi-angle station selection ----------------
+    # Two gates per candidate now that base<->table collision is ON:
+    #   (1) PHYSICS: teleport the base there, hold for a few steps — if the table (or
+    #       anything) shoves the base off the target, the station is physically invalid.
+    #   (2) IK: the tilted full-pose IK for the target must converge from that station.
+    def armbase_xy():
+        for l in be.agent.robot.get_links():
+            if l.name == "left_base":
+                p = l.pose.p
+                return ((p[0].cpu().numpy() if hasattr(p, "cpu") else np.asarray(p).reshape(-1))[:2]).astype(np.float64)
+        return None
+
     def select_station(target_pt, label):
-        """Teleport-check candidate base stations; return the one whose tilted IK is best."""
-        appr_dir = desired_approach_dir(target_pt, PITCH).astype(np.float32)
         jaw_dir = np.array([1.0, 0.0, 0.0], np.float32)
         q0 = qnow()
+        rest = skill.current_action_template(env)[lay["left_arm"]].astype(np.float32)
         best = None
-        for dx in (-0.15, -0.075, 0.0, 0.075, 0.15):
-            for by in (-0.32, -0.26, -0.20):
-                bx = float(target_pt[0] - 0.156 + dx)   # arm base sits ~+0.156 in x from root
-                q = q0.copy()
-                q[BASE_IDS[0]], q[BASE_IDS[1]], q[BASE_IDS[2]] = bx, by, 0.0
-                set_q(q)
-                r = solve_arm_ik_full_pose(env, target_pt, appr_dir, jaw_dir,
-                                           arm="left", lift_position=0.0,
-                                           shoulder_lift_seed=1.0, max_iters=120)
-                score = r.error
-                if best is None or score < best[0]:
-                    best = (score, bx, by, r.arm_qpos.copy())
+        # arm-base offset from robot root, per yaw (root+R(yaw)@[0.156,-0.041]).
+        # yaw=-90 deg TURNS THE BODY TOWARD the table: the arm base moves 0.156 m south
+        # of the root, so a legal north-edge station still puts the target in easy reach.
+        ARMOFF = {0.0: (0.156, -0.041), -np.pi / 2: (-0.041, -0.156)}
+        for yaw, (ox, oy) in ARMOFF.items():
+            for dx in (-0.10, -0.05, 0.0, 0.05, 0.10):
+                for by in (0.08, 0.04, 0.01):   # WORLD y, OUTSIDE the table footprint (north edge -0.21, cart ~0.2)
+                    bx = float(target_pt[0] - ox + dx)   # WORLD x
+                    j = w2j((bx, by, yaw))
+                    q = q0.copy()
+                    q[BASE_IDS[0]], q[BASE_IDS[1]], q[BASE_IDS[2]] = j[0], j[1], j[2]
+                    set_q(q)
+                    # physics settle: does the base actually HOLD this station?
+                    hold = act((bx, by, yaw), rest, op, 0.0)
+                    for _ in range(6):
+                        env.step(torch.as_tensor(hold)[None])
+                    qs = qnow()
+                    base_err = float(np.hypot(qs[BASE_IDS[0]] - j[0], qs[BASE_IDS[1]] - j[1]))
+                    if base_err > 0.02:
+                        continue   # table (or clutter) rejected this station
+                    # approach dir must lean from the CANDIDATE's actual arm base — the
+                    # helper's default base_xy=(-0.35,0) is only right for the original
+                    # fixed-base layout and rakes the object from any other station.
+                    ab = armbase_xy()
+                    appr_dir = desired_approach_dir(target_pt, PITCH, base_xy=tuple(ab)).astype(np.float32)
+                    r = solve_arm_ik_full_pose(env, target_pt, appr_dir, jaw_dir,
+                                               arm="left", lift_position=0.0,
+                                               shoulder_lift_seed=1.0, max_iters=120)
+                    # comfort tiebreak: prefer stations whose arm base sits in the sweet
+                    # range (~0.16-0.25 m) over marginal far-reach ones with equal IK.
+                    dist = float(np.linalg.norm(ab - target_pt[:2]))
+                    comfort = abs(dist - 0.20)
+                    score = r.error + 0.02 * comfort
+                    if os.environ.get("FEASDBG"):
+                        lb = be.agent.robot.links_map.get("left_base") if hasattr(be.agent.robot, "links_map") else None
+                        lbp = None
+                        for l in be.agent.robot.get_links():
+                            if l.name == "left_base":
+                                p = l.pose.p
+                                lbp = (p[0].cpu().numpy() if hasattr(p, "cpu") else np.asarray(p).reshape(-1))[:3]
+                        d = float(np.linalg.norm(lbp[:2] - target_pt[:2])) if lbp is not None else -1
+                        print(f"    cand yaw={np.degrees(yaw):+.0f} bx={bx:+.3f} by={by:+.3f} "
+                              f"armbase=({lbp[0]:+.3f},{lbp[1]:+.3f}) dist_xy={d:.3f} ik={r.error:.4f}", flush=True)
+                    if best is None or score < best[0]:
+                        best = (score, bx, by, yaw, r.arm_qpos.copy(), r.error)
         set_q(q0)
-        print(f"[FEAS {label}] station=({best[1]:+.3f},{best[2]:+.3f}) ik_err={best[0]:.4f}", flush=True)
-        return best[1], best[2]
+        if best is None:
+            raise RuntimeError(f"no physically-valid station found for {label}")
+        print(f"[FEAS {label}] station=({best[1]:+.3f},{best[2]:+.3f},yaw={np.degrees(best[3]):.0f}deg) "
+              f"ik_err={best[5]:.4f}", flush=True)
+        # return the winning arm config too — it seeds the MANIP IK after NAV (cold-start
+        # sweeps can miss at far-reach stations that the FEAS solve already cracked).
+        return np.array([best[1], best[2], best[3]], np.float32), best[4]
 
     frames = [to_u8(env.render())]
     marks = {}
 
-    def act(base_xy_t, arm_q, grip, lift):
+    def act(base_t, arm_q, grip, lift):
+        """base_t = WORLD (x, y) or (x, y, yaw) — converted to root-relative joint targets."""
         a = skill.current_action_template(env)
-        a[0], a[1], a[2] = float(base_xy_t[0]), float(base_xy_t[1]), 0.0
+        yaw = float(base_t[2]) if len(base_t) > 2 else 0.0
+        j = w2j((float(base_t[0]), float(base_t[1]), yaw))
+        a[0], a[1], a[2] = float(j[0]), float(j[1]), float(j[2])
         a[3] = float(lift)
         a[lay["right_grip"]] = op
         skill.set_arm_action(a, "left", arm_q, grip)
         return a.astype(np.float32)
 
+    NOREN = bool(os.environ.get("NORENDER"))
+
     def run(actions):
         for a in actions:
             env.step(torch.as_tensor(a)[None])
-            frames.append(to_u8(env.render()))
+            if not NOREN:
+                frames.append(to_u8(env.render()))
 
     rest_q = skill.current_action_template(env)[lay["left_arm"]].astype(np.float32)
-    base0 = qnow()[BASE_IDS][:2]
+    base0 = qnow()[BASE_IDS]   # joint coords (x, y, yaw)
+    base0[0] += ROOT_XY[0]; base0[1] += ROOT_XY[1]   # -> WORLD
 
-    # ---------------- NAV-1: drive to the pick station (arm at rest, above the table) ---
+    # ---------------- FEASIBILITY (both stations UPFRONT, while the scene is static —
+    # the place feasibility must not teleport the base around while the cube is held) --
     grasp_pt = obj0.astype(np.float32)
-    st1 = np.array(select_station(grasp_pt, "pick"), np.float32)
+    place_pt = np.array([PLACE_XY[0], PLACE_XY[1], obj0[2]], np.float32)
+    st1, st1_arm_seed = select_station(grasp_pt, "pick")
+    st2, st2_arm_seed = select_station(place_pt, "place")
+    if os.environ.get("FEASDBG"):
+        env.close(); return
     marks["NAV-1"] = len(frames)
     nav1 = [act(b, rest_q, op, 0.0) for b in interp(base0, st1, V_BASE)]
+    nav1 += [nav1[-1]] * 20   # settle: let the base PD fully converge on the station
     run(nav1)
 
     # ---------------- MANIP-1: validated grasp from the settled station ----------------
     marks["PICK"] = len(frames)
-    appr_dir = desired_approach_dir(grasp_pt, PITCH).astype(np.float32)
+    grasp_pt = actor_position(resolve_actor(env, name)).astype(np.float32)  # re-perceive
+    qpn = qnow()
+    lbw = None
+    for l in be.agent.robot.get_links():
+        if l.name == "left_base":
+            p = l.pose.p
+            lbw = (p[0].cpu().numpy() if hasattr(p, "cpu") else np.asarray(p).reshape(-1))[:3]
+    print(f"[NAVCHK] base joints=({qpn[BASE_IDS[0]]+ROOT_XY[0]:+.3f},{qpn[BASE_IDS[1]]+ROOT_XY[1]:+.3f},"
+          f"yaw={np.degrees(qpn[BASE_IDS[2]]):+.0f}deg) target st1=({st1[0]:+.3f},{st1[1]:+.3f},"
+          f"yaw={np.degrees(st1[2]):+.0f}deg) left_base_world={np.round(lbw,3).tolist()} "
+          f"obj={np.round(grasp_pt,3).tolist()}", flush=True)
+    appr_dir = desired_approach_dir(grasp_pt, PITCH, base_xy=tuple(lbw[:2])).astype(np.float32)
     jaw_dir = np.array([1.0, 0.0, 0.0], np.float32)
     pre_pt = (grasp_pt - appr_dir * 0.11).astype(np.float32)
-    desc = _best_full_pose(env, grasp_pt, appr_dir, jaw_dir, "left", 0.0)
+    desc = _best_full_pose(env, grasp_pt, appr_dir, jaw_dir, "left", 0.0, seed=st1_arm_seed)
     appr = _best_full_pose(env, pre_pt, appr_dir, jaw_dir, "left", 0.0, seed=desc.arm_qpos)
     print(f"[PICK] ik appr={appr.error:.4f} desc={desc.error:.4f}", flush=True)
     descent = [appr.arm_qpos]; seedq = appr.arm_qpos
@@ -160,44 +249,64 @@ def main():
     print(f"[PICK] lifted obj z={held[2]:.3f} (start {obj0[2]:.3f})", flush=True)
 
     # ---------------- NAV-2: carry to the place station (arm frozen, gripper closed) ---
-    place_pt = np.array([PLACE_XY[0], PLACE_XY[1], obj0[2]], np.float32)
-    st2 = np.array(select_station(place_pt, "place"), np.float32)
     marks["NAV-2"] = len(frames)
-    nav2 = [act(b, desc_q, cl, 0.16) for b in interp(st1, st2, V_BASE)]
+    # gentle carry: half speed — the 0.2 m/s velocity step of full V_BASE jerks the
+    # held object out of the 15 N gripper.
+    nav2 = [act(b, desc_q, cl, 0.16) for b in interp(st1, st2, V_BASE * 0.5)]
+    nav2 += [nav2[-1]] * 20   # settle on the place station
     run(nav2)
+    carried = actor_position(resolve_actor(env, name))
+    print(f"[CARRY] obj after NAV-2 = {np.round(carried,3).tolist()} "
+          f"({'STILL HELD' if carried[2] > obj0[2] + 0.05 else 'DROPPED DURING CARRY!'})", flush=True)
+    # The object is not gripped exactly at the TCP; aim the place descent at
+    # (target - grasp_offset) so the OBJECT (not the TCP) lands on the target.
+    t1p = be.agent.left_finger1_tip.pose.p; t2p = be.agent.left_finger2_tip.pose.p
+    t1p = (t1p[0].cpu().numpy() if hasattr(t1p, "cpu") else np.asarray(t1p).reshape(-1))[:3]
+    t2p = (t2p[0].cpu().numpy() if hasattr(t2p, "cpu") else np.asarray(t2p).reshape(-1))[:3]
+    grasp_off = (carried[:2] - (t1p + t2p)[:2] / 2).astype(np.float32)
+    print(f"[CARRY] grasp offset obj-TCP = {np.round(grasp_off*1000,0).tolist()} mm", flush=True)
 
-    # ---------------- MANIP-2: Cartesian descent to the place point, release, retreat --
+    # ---------------- MANIP-2 (ARM FROZEN): base fine-align + lift-only descent ------
+    # Every attempt to reconfigure the arm while holding the cube slung it out of the
+    # 15 N grip (TRK traces). So: do not move the arm at all. NAV-2 already parks the
+    # cube ~1-2 cm from the target; close the rest with the BASE (closed-loop), descend
+    # with the LIFT to 2 cm above the table, release, and retreat with the lift.
     marks["PLACE"] = len(frames)
-    appr_dir2 = desired_approach_dir(place_pt, PITCH).astype(np.float32)
-    desc2 = _best_full_pose(env, place_pt, appr_dir2, jaw_dir, "left", 0.0)
-    appr2 = _best_full_pose(env, (place_pt - appr_dir2 * 0.11).astype(np.float32),
-                            appr_dir2, jaw_dir, "left", 0.0, seed=desc2.arm_qpos)
-    print(f"[PLACE] ik appr={appr2.error:.4f} desc={desc2.error:.4f}", flush=True)
-    descent2 = [appr2.arm_qpos]; seedq = appr2.arm_qpos
-    for s in np.linspace(0.11, 0.0, 9)[1:]:
-        w = _best_full_pose(env, (place_pt - appr_dir2 * s).astype(np.float32),
-                            appr_dir2, jaw_dir, "left", 0.0, seed=seedq)
-        descent2.append(w.arm_qpos); seedq = w.arm_qpos
-    desc2_q = descent2[-1]
+    cur_base = st2.copy()
+    for _ in range(3):
+        obj_now = actor_position(resolve_actor(env, name))
+        delta = np.array([PLACE_XY[0] - obj_now[0], PLACE_XY[1] - obj_now[1]], np.float32)
+        if float(np.linalg.norm(delta)) < 0.008:
+            break
+        tgt = cur_base.copy(); tgt[0] += delta[0]; tgt[1] += delta[1]
+        print(f"[PLACE] base fine-align {np.round(delta*1000,0).tolist()} mm", flush=True)
+        acts = [act(b, desc_q, cl, 0.16) for b in interp(cur_base, tgt, V_BASE * 0.5)]
+        acts += [act(tgt, desc_q, cl, 0.16)] * 10
+        run(acts)
+        cur_base = tgt
+    # lift-only descent: lower until the cube hangs ~2 cm above the table
+    obj_now = actor_position(resolve_actor(env, name))
+    drop = float(obj_now[2] - (obj0[2] + 0.02))
+    lift_lo = max(0.16 - drop, -0.1)
+    print(f"[PLACE] lift descent 0.16 -> {lift_lo:.3f} (cube {obj_now[2]:.3f} -> ~{obj0[2]+0.02:.3f})", flush=True)
+    acts = [act(cur_base, desc_q, cl, float(lz[0])) for lz in interp([0.16], [lift_lo], V_LIFT)]
+    acts += [act(cur_base, desc_q, cl, lift_lo)] * 15
+    run(acts)
+    o = actor_position(resolve_actor(env, name))
+    print(f"    [TRK pre-release] obj={np.round(o,3).tolist()} held={o[2] > obj0[2] + 0.03}", flush=True)
+    # release + retreat up with the lift (fingers never translate over the placed cube)
     acts = []
-    # lower the lift back down while moving to the pre-place config
-    for lz, q in zip(interp([0.16], [0.0], V_LIFT),
-                     interp(desc_q, appr2.arm_qpos, V_ARM) or [appr2.arm_qpos]):
-        acts.append(act(st2, q, cl, float(lz[0])))
-    # make sure both finish
-    for q in interp(desc_q, appr2.arm_qpos, V_ARM):      acts.append(act(st2, q, cl, 0.0))
-    for q0_, q1_ in zip(descent2[:-1], descent2[1:]):
-        for q in interp(q0_, q1_, V_ARM_DESCEND):        acts.append(act(st2, q, cl, 0.0))
-    for k in range(1, CLOSE_STEPS + 1):                  acts.append(act(st2, desc2_q, cl + (op - cl) * k / CLOSE_STEPS, 0.0))
-    for q in interp(desc2_q, appr2.arm_qpos, V_ARM):     acts.append(act(st2, q, op, 0.0))
-    for _ in range(HOLD):                                acts.append(act(st2, appr2.arm_qpos, op, 0.0))
+    for k in range(1, 11):                               acts.append(act(cur_base, desc_q, cl + (op - cl) * k / 10, lift_lo))
+    for _ in range(10):                                  acts.append(act(cur_base, desc_q, op, lift_lo))
+    for lz in interp([lift_lo], [0.16], V_LIFT):         acts.append(act(cur_base, desc_q, op, float(lz[0])))
+    for _ in range(HOLD):                                acts.append(act(cur_base, desc_q, op, 0.16))
     run(acts)
 
     objf = actor_position(resolve_actor(env, name))
-    err = float(np.linalg.norm(objf[:2] - place_pt[:2]))
+    err = float(np.linalg.norm(objf[:2] - PLACE_XY))
     placed = err < 0.06 and abs(objf[2] - obj0[2]) < 0.03
     print(f"RESULT placed={placed} obj_final={np.round(objf,3).tolist()} "
-          f"place_target={np.round(place_pt,3).tolist()} xy_err={err*1000:.0f}mm", flush=True)
+          f"place_target={np.round(PLACE_XY,3).tolist()} xy_err={err*1000:.0f}mm", flush=True)
     env.close()
 
     path = os.path.join(OUT, "pro_nav_pick_place.mp4")

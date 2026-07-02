@@ -20,8 +20,13 @@ rendered frames. This mirrors ASPIRE's robot execution engine feedback.
 | `tilted_approach.json` | vertical top-down descent bottoms the palm on the object → tilt the approach axis 55–70° |
 | `desc_first_ik_branch.json` | grasp-pose IK seeded from the pre-grasp lands the wrist ON the object → solve the grasp config first, seed the pre-grasp from it |
 | `cartesian_line_descent.json` | joint-space interpolation between IK waypoints sweeps an arc that rakes the object → IK waypoints along the approach line |
+| `linear_push.json` | push a tabletop object to target XY without grasping -> feasibility-gated station, closed horizontal gripper, 1 cm Cartesian waypoints, contact/trajectory-tuned endpoint |
 | `spurious_self_collision_bits.json` | convex-hull contacts between rigidly-related links shove the arm off command → share a collision-disable bit across the subtree |
 | `empty_bbox_placement.json` | scene-placement Z computed from an empty robot bbox → robust bbox (extent union, instance proxies, ancestor walk) |
+| `floor_penetration_base_pinning.json` | wheel collision geometry penetrates the floor and pins NAV with huge normal impulses → spawn the root at measured wheel-rest height |
+| `station_relative_approach_dir.json` | tilted approach computed from a hardcoded base origin works only at home station → derive the approach from live arm-base pose |
+| `elevated_release_place.json` | tilted-axis place drags the object during surface-contact descent → release 1.5–2.5 cm above the surface and let it drop |
+| `frozen_arm_base_lift_place.json` | any arm reconfiguration while holding slings the object out → freeze the arm; fine-align with the base, descend with the lift |
 
 Loader: `library.py` (`load_skills()` returns all entries; `match(symptoms)` does a
 naive keyword match over failure signatures — good enough for in-context retrieval).

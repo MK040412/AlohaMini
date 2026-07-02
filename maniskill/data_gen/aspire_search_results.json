@@ -1,0 +1,46 @@
+{
+  "rounds": [
+    {
+      "candidates": [
+        {
+          "pitch_deg": 66.52302260528623,
+          "approach_h": 0.12036160363703644,
+          "descend_offset": 0.005709456521876795,
+          "jaw_dir": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "close_steps": 24,
+          "station_by": 0.01
+        }
+      ],
+      "scores": [
+        1.0
+      ]
+    }
+  ],
+  "best": {
+    "pitch_deg": 66.52302260528623,
+    "approach_h": 0.12036160363703644,
+    "descend_offset": 0.005709456521876795,
+    "jaw_dir": [
+      1.0,
+      0.0,
+      0.0
+    ],
+    "close_steps": 24,
+    "station_by": 0.01,
+    "score": 1.0,
+    "debug_scores": [
+      1.0,
+      1.0
+    ],
+    "total_rollouts": 5
+  },
+  "validation_scores": [
+    1.0,
+    1.0,
+    1.0
+  ]
+}

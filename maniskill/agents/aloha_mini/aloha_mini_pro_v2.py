@@ -120,13 +120,9 @@ class AlohaMiniProV2(AlohaMiniSO100V2):
     # per-side bits used to disable gripper<->arm self-collision (see _after_init)
     _LEFT_ARM_GRIP_BIT = 25
     _RIGHT_ARM_GRIP_BIT = 26
-    # bit shared with the table/floor actors so the floor-standing base body (which must
-    # sit close to reach the tabletop with the shorter 6-DOF arm) does not collide with
-    # the table slab/legs. The env tags the table actors with the same bit.
-    BASE_TABLE_BIT = 24
-    BASE_BODY_LINKS = ("root", "root_x_link", "root_y_link", "base_link",
-                       "wheel1", "wheel2", "wheel3", "vertical_link",
-                       "left_base", "right_base")
+    # NOTE: an earlier build shared a bit-24 with the table so the base could sit inside
+    # the table footprint. NAV/MANIP separation drives the base to a physically-valid
+    # station instead, so the base now collides with the table normally.
 
     def _after_init(self):
         # Sets up palm/finger links + finger-finger collision bits (Std logic).
@@ -152,8 +148,3 @@ class AlohaMiniProV2(AlohaMiniSO100V2):
                 link = robot_links.get(name)
                 if link is not None:
                     link.set_collision_group_bit(group=2, bit_idx=bit, bit=1)
-        # base-body links share BASE_TABLE_BIT with the table/floor (env tags those too)
-        for name in self.BASE_BODY_LINKS:
-            link = robot_links.get(name)
-            if link is not None:
-                link.set_collision_group_bit(group=2, bit_idx=self.BASE_TABLE_BIT, bit=1)

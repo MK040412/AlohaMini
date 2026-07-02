@@ -331,12 +331,19 @@ class AlohaMiniMultiYCBEnv(BaseEnv):
         render_target: list[float] | None = None,
         robot_uid: str = ROBOT,
         base_xy: tuple[float, float] | None = None,
+        slot_override_xy: list[tuple[float, float]] | None = None,
         **kwargs,
     ):
         self._robot_uid = robot_uid
         # The 6-DOF Pro arm has a smaller reach than the 5-DOF SO100, so its base can
         # be moved toward the objects. Default keeps the validated Std placement.
         self._base_xy = tuple(base_xy) if base_xy is not None else (-0.35, 0.0)
+        # Optional per-index world-XY override for object placement (e.g. put the pick
+        # object near the table edge so it is reachable from a base station OUTSIDE the
+        # table footprint in the NAV/MANIP pick-and-place demo).
+        self._slot_override_xy = (
+            [tuple(p) for p in slot_override_xy] if slot_override_xy is not None else None
+        )
         self.object_ids = list(object_ids or MULTI_YCB_DEFAULT_OBJECT_IDS)
         if not self.object_ids:
             raise ValueError("AlohaMiniMultiYCB-v1 requires at least one object id.")
@@ -402,18 +409,10 @@ class AlohaMiniMultiYCBEnv(BaseEnv):
             color=[0.50, 0.32, 0.18, 1.0],
         )
         self._build_table_legs()
-        # For the shorter-reach 6-DOF Pro arm the floor-standing base must sit close to
-        # the table to reach it, so the base body would clip the table slab/legs. Tag the
-        # table + floor with the base<->table collision bit (24, matching the Pro agent's
-        # BASE_BODY_LINKS) so the body passes through them; objects keep their table
-        # collision. No-op for the Std robot (its base links don't carry the bit).
-        if self._robot_uid == "aloha_mini_pro_v2":
-            for name in ("multi_ycb_floor", "multi_ycb_table_top",
-                         "multi_ycb_table_leg_0", "multi_ycb_table_leg_1",
-                         "multi_ycb_table_leg_2", "multi_ycb_table_leg_3"):
-                actor = self.scene.actors.get(name)
-                if actor is not None:
-                    actor.set_collision_group_bit(group=2, bit_idx=24, bit=1)
+        # NOTE: an earlier build disabled base<->table collision (bit 24) here so the Pro
+        # base could sit inside the table footprint. With NAV/MANIP separation the base
+        # now drives to a physically-valid station instead (feasibility-gated), so the
+        # robot collides with the table normally — no more visual base/table overlap.
 
         self.object_actor_names = []
         self.object_actors = {}
@@ -450,11 +449,17 @@ class AlohaMiniMultiYCBEnv(BaseEnv):
         with torch.device(self.device):
             b = len(env_idx)
             self.agent.reset(self.agent.keyframes["ready"].qpos)
-            self.agent.robot.set_pose(sapien.Pose(p=[self._base_xy[0], self._base_xy[1], 0]))
+            # Spawn 9 mm up: the wheel meshes extend 7.3 mm below z=0, and with the
+            # fixed root the resulting floor interpenetration produced ~10k contact
+            # impulses that pinned the base (NAV commands had no effect at all).
+            self.agent.robot.set_pose(sapien.Pose(p=[self._base_xy[0], self._base_xy[1], 0.009]))
 
             for index, object_id in enumerate(self.object_ids):
                 actor = self.object_actors[object_id]
-                xy = np.asarray(_multi_ycb_slot_xy(index), dtype=np.float32)
+                if self._slot_override_xy is not None and index < len(self._slot_override_xy):
+                    xy = np.asarray(self._slot_override_xy[index], dtype=np.float32)
+                else:
+                    xy = np.asarray(_multi_ycb_slot_xy(index), dtype=np.float32)
                 if self.object_xy_noise > 0:
                     noise = (torch.rand((b, 2)) * 2 - 1) * self.object_xy_noise
                 else:
