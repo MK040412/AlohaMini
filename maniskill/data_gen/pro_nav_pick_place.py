@@ -20,6 +20,7 @@ sys.path.insert(0, "/tmp/claude-1000/-home-perelman-AlohaMini/2d745dbb-3484-4eaa
 import mani_skill.envs, data_gen
 from grasp_demo_v2 import (SlowGrasp, _best_full_pose, interp,
                            V_ARM, V_ARM_DESCEND, V_LIFT, CLOSE_STEPS, SETTLE, HOLD, FPS, FRAMES_TMP)
+from data_gen.aspire_engine.nav_planner import plan_path
 from data_gen.intern_engine.skills.ik import (actor_position, resolve_actor,
                                               desired_approach_dir, solve_arm_ik_full_pose)
 
@@ -37,6 +38,10 @@ PITCH = 60.0
 PICK_XY = np.array([-0.13, -0.31], np.float32)
 PLACE_XY = np.array([0.06, -0.31], np.float32)
 V_BASE = 0.010     # m/step  (~0.2 m/s)  base translation cap
+NAV_OBSTACLES = [{"center": [-0.13, -0.45], "half": [0.30, 0.24], "margin": 0.02}]
+NAV_ROBOT_RADIUS = 0.22
+NAV_BOUNDS = (-1.2, 1.0, -1.0, 1.0)
+NOREN = bool(os.environ.get("NORENDER"))
 OUT = "/home/perelman/AlohaMini/maniskill/data_gen/output/demo_pro"
 os.makedirs(OUT, exist_ok=True)
 
@@ -65,12 +70,13 @@ def to_u8(fr):
 
 def main():
     env = gym.make("AlohaMiniMultiYCB-v1", num_envs=1, obs_mode="state",
-                   control_mode="pd_joint_pos_fixed_base", render_mode="rgb_array",
+                   control_mode="pd_joint_pos_fixed_base", render_mode=None if NOREN else "rgb_array",
                    reward_mode="none", sim_backend="physx_cpu", object_ids=[OBJ],
-                   robot_uid="aloha_mini_pro_v2", base_xy=(-0.40, 0.18),  # start clearly off-table
+                   robot_uid="aloha_mini_pro_v2", base_xy=(-0.85, -0.75),
                    slot_override_xy=[tuple(PICK_XY)],
                    render_eye=[0.60, -1.05, 1.20], render_target=[-0.05, -0.30, 0.80],
-                   human_render_camera_configs=dict(shader_pack="rt-fast", width=W, height=H))
+                   human_render_camera_configs={} if NOREN else dict(shader_pack="rt-fast", width=W, height=H),
+                   render_backend="none" if NOREN else "gpu")
     be = env.unwrapped
     env.reset(seed=0)
     robot = be.agent.robot
@@ -125,7 +131,7 @@ def main():
         ARMOFF = {0.0: (0.156, -0.041), -np.pi / 2: (-0.041, -0.156)}
         for yaw, (ox, oy) in ARMOFF.items():
             for dx in (-0.10, -0.05, 0.0, 0.05, 0.10):
-                for by in (0.08, 0.04, 0.01):   # WORLD y, OUTSIDE the table footprint (north edge -0.21, cart ~0.2)
+                for by in (0.08,):   # WORLD y, outside the inflated table footprint used by A*
                     bx = float(target_pt[0] - ox + dx)   # WORLD x
                     j = w2j((bx, by, yaw))
                     q = q0.copy()
@@ -173,7 +179,7 @@ def main():
         # sweeps can miss at far-reach stations that the FEAS solve already cracked).
         return np.array([best[1], best[2], best[3]], np.float32), best[4]
 
-    frames = [to_u8(env.render())]
+    frames = [] if NOREN else [to_u8(env.render())]
     marks = {}
 
     def act(base_t, arm_q, grip, lift):
@@ -187,13 +193,29 @@ def main():
         skill.set_arm_action(a, "left", arm_q, grip)
         return a.astype(np.float32)
 
-    NOREN = bool(os.environ.get("NORENDER"))
-
     def run(actions):
         for a in actions:
             env.step(torch.as_tensor(a)[None])
             if not NOREN:
                 frames.append(to_u8(env.render()))
+
+    def drive_path_actions(path_xy, start_pose, target_pose, arm_q, grip, lift, vmax):
+        actions = []
+        cur = np.asarray(start_pose, dtype=np.float32).copy()
+        target_pose = np.asarray(target_pose, dtype=np.float32)
+        points = [np.asarray(p, dtype=np.float32) for p in path_xy]
+        drive_points = points.copy()
+        if drive_points and float(np.linalg.norm(drive_points[0] - cur[:2])) <= 0.03:
+            drive_points = drive_points[1:]
+        if not drive_points or float(np.linalg.norm(drive_points[-1] - target_pose[:2])) > 1e-6:
+            drive_points.append(target_pose[:2].copy())
+        for xy in drive_points:
+            tgt = np.array([xy[0], xy[1], target_pose[2]], np.float32)
+            actions.extend(act(b, arm_q, grip, lift) for b in interp(cur, tgt, vmax))
+            cur = tgt
+        if not actions:
+            actions.append(act(target_pose, arm_q, grip, lift))
+        return actions
 
     rest_q = skill.current_action_template(env)[lay["left_arm"]].astype(np.float32)
     base0 = qnow()[BASE_IDS]   # joint coords (x, y, yaw)
@@ -208,7 +230,11 @@ def main():
     if os.environ.get("FEASDBG"):
         env.close(); return
     marks["NAV-1"] = len(frames)
-    nav1 = [act(b, rest_q, op, 0.0) for b in interp(base0, st1, V_BASE)]
+    path1 = plan_path(NAV_OBSTACLES, base0[:2], st1[:2], NAV_ROBOT_RADIUS, NAV_BOUNDS)
+    if path1 is None:
+        raise RuntimeError("A* failed for start->pick")
+    print(f"[NAV] path waypoints={len(path1)} (start->pick)", flush=True)
+    nav1 = drive_path_actions(path1, base0, st1, rest_q, op, 0.0, V_BASE)
     nav1 += [nav1[-1]] * 20   # settle: let the base PD fully converge on the station
     run(nav1)
 
@@ -252,7 +278,11 @@ def main():
     marks["NAV-2"] = len(frames)
     # gentle carry: half speed — the 0.2 m/s velocity step of full V_BASE jerks the
     # held object out of the 15 N gripper.
-    nav2 = [act(b, desc_q, cl, 0.16) for b in interp(st1, st2, V_BASE * 0.5)]
+    path2 = plan_path(NAV_OBSTACLES, st1[:2], st2[:2], NAV_ROBOT_RADIUS, NAV_BOUNDS)
+    if path2 is None:
+        raise RuntimeError("A* failed for pick->place")
+    print(f"[NAV] path waypoints={len(path2)} (pick->place)", flush=True)
+    nav2 = drive_path_actions(path2, st1, st2, desc_q, cl, 0.16, V_BASE * 0.5)
     nav2 += [nav2[-1]] * 20   # settle on the place station
     run(nav2)
     carried = actor_position(resolve_actor(env, name))
@@ -309,9 +339,10 @@ def main():
           f"place_target={np.round(PLACE_XY,3).tolist()} xy_err={err*1000:.0f}mm", flush=True)
     env.close()
 
-    path = os.path.join(OUT, "pro_nav_pick_place.mp4")
-    encode(frames, path)
-    print("VIDEO", path, os.path.getsize(path) // 1024, "KB", flush=True)
+    if not NOREN:
+        path = os.path.join(OUT, "pro_nav_pick_place.mp4")
+        encode(frames, path)
+        print("VIDEO", path, os.path.getsize(path) // 1024, "KB", flush=True)
     print("PHASES", marks, "total_frames", len(frames), flush=True)
 
 
