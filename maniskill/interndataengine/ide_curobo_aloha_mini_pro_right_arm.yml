@@ -1,0 +1,127 @@
+robot_cfg:
+  kinematics:
+    usd_path: "robot/aloha_mini_pro/aloha_mini_pro.usd"
+    usd_robot_root: "/aloha_mini_pro_v3"
+    isaac_usd_path: ""
+    usd_flip_joints: {}
+    usd_flip_joint_limits: []
+
+    urdf_path: "robot/aloha_mini_pro/aloha_mini_pro.urdf"
+    asset_root_path: "robot"
+
+    base_link: "right_base"
+    ee_link: "right_Fixed_Jaw"
+
+    extra_links: {"attached_object":{"parent_link_name": "right_Fixed_Jaw" ,
+    "link_name": "attached_object", "fixed_transform": [0,0,0,1,0,0,0], "joint_type":"FIXED",
+    "joint_name": "attach_joint" }}
+
+    collision_link_names:
+      [
+        "right_base",
+        "right_link1",
+        "right_link2",
+        "right_link3",
+        "right_link4",
+        "right_Fixed_Jaw",
+        "right_finger1",
+        "right_finger2",
+        "attached_object",
+      ]
+    collision_spheres:
+      right_base:
+        - "center": [-0.037, 0.036, 0.023]
+          "radius": 0.036
+        - "center": [0.0, 0.036, 0.023]
+          "radius": 0.036
+        - "center": [0.037, 0.036, 0.023]
+          "radius": 0.036
+      right_link1:
+        - "center": [0.001, -0.020, -0.025]
+          "radius": 0.033
+        - "center": [0.001, -0.020, 0.017]
+          "radius": 0.033
+      right_link2:
+        - "center": [0.021, 0.006, 0.001]
+          "radius": 0.032
+        - "center": [0.021, 0.041, 0.001]
+          "radius": 0.032
+        - "center": [0.021, 0.077, 0.001]
+          "radius": 0.031
+        - "center": [0.021, 0.113, 0.001]
+          "radius": 0.030
+      right_link3:
+        - "center": [0.021, -0.097, 0.0]
+          "radius": 0.031
+        - "center": [0.021, -0.053, 0.0]
+          "radius": 0.031
+        - "center": [0.021, -0.010, 0.0]
+          "radius": 0.030
+      right_link4:
+        - "center": [0.023, -0.047, 0.002]
+          "radius": 0.027
+        - "center": [0.023, -0.008, 0.002]
+          "radius": 0.027
+      right_Fixed_Jaw:
+        - "center": [-0.030, -0.033, 0.030]
+          "radius": 0.032
+        - "center": [0.0, -0.033, 0.030]
+          "radius": 0.032
+        - "center": [0.030, -0.033, 0.030]
+          "radius": 0.032
+      right_finger1:
+        - "center": [0.062, 0.115, 0.186]
+          "radius": 0.029
+        - "center": [0.062, 0.143, 0.186]
+          "radius": 0.029
+      right_finger2:
+        - "center": [-0.083, 0.117, 0.184]
+          "radius": 0.029
+        - "center": [-0.083, 0.145, 0.184]
+          "radius": 0.029
+    collision_sphere_buffer: 0.004
+    extra_collision_spheres: {"attached_object": 4}
+    self_collision_ignore:
+      {
+        "right_base": ["right_link1", "right_link2", "right_link3", "right_link4", "right_Fixed_Jaw", "right_finger1", "right_finger2", "attached_object"],
+        "right_link1": ["right_link2", "right_link3", "right_link4", "right_Fixed_Jaw", "right_finger1", "right_finger2", "attached_object"],
+        "right_link2": ["right_link3", "right_link4", "right_Fixed_Jaw", "right_finger1", "right_finger2", "attached_object"],
+        "right_link3": ["right_link4", "right_Fixed_Jaw", "right_finger1", "right_finger2", "attached_object"],
+        "right_link4": ["right_Fixed_Jaw", "right_finger1", "right_finger2", "attached_object"],
+        "right_Fixed_Jaw": ["right_finger1", "right_finger2", "attached_object"],
+        "right_finger1": ["right_finger2", "attached_object"]
+      }
+    self_collision_buffer:
+      {
+        "right_base": 0.035,
+        "right_link1": 0.025,
+        "right_link2": 0.025,
+        "right_link3": 0.025,
+        "right_link4": 0.02,
+        "right_Fixed_Jaw": 0.015,
+        "right_finger1": 0.01,
+        "right_finger2": 0.01,
+        "attached_object": 0.0,
+      }
+    use_global_cumul: True
+    mesh_link_names:
+      [
+        "right_base",
+        "right_link1",
+        "right_link2",
+        "right_link3",
+        "right_link4",
+        "right_Fixed_Jaw",
+        "right_finger1",
+        "right_finger2"
+      ]
+    external_asset_path: null
+    lock_joints: {"right_finger_joint1": 0.037, "right_finger_joint2": 0.037}
+
+    cspace:
+      joint_names: ["right_joint1","right_joint2","right_joint3","right_joint4","right_joint5","right_joint6"]
+      retract_config: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
+      null_space_weight: [1,1,1,1,1,1]
+      cspace_distance_weight: [1,1,1,1,1,1]
+      max_acceleration: 15.0
+      max_jerk: 500.0

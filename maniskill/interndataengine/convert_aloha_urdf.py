@@ -9,8 +9,8 @@ import omni.kit.commands
 import omni.usd
 from pxr import UsdPhysics
 
-URDF = "/home/perelman/.maniskill/data/robots/aloha_mini/maniskill_so100_version.urdf"
-OUT_DIR = "/tmp/claude-1000/-home-perelman-AlohaMini/2d745dbb-3484-4eaa-af51-d8284661b2bf/scratchpad/InternDataEngine/workflows/simbox/assets/aloha_mini"
+URDF = os.environ.get("SRC_URDF", "/home/perelman/.maniskill/data/robots/aloha_mini/maniskill_so100_version.urdf")
+OUT_DIR = os.environ.get("OUT_DIR", "/tmp/claude-1000/-home-perelman-AlohaMini/2d745dbb-3484-4eaa-af51-d8284661b2bf/scratchpad/InternDataEngine/workflows/simbox/assets/aloha_mini")
 os.makedirs(OUT_DIR, exist_ok=True)
 OUT_USD = os.path.join(OUT_DIR, "robot.usd")
 

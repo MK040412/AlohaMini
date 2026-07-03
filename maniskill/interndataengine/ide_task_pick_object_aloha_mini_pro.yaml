@@ -1,0 +1,127 @@
+tasks:
+  -
+    name: banana_base_task
+    asset_root: workflows/simbox/assets
+    task: BananaBaseTask
+    task_id: 0
+
+    offset: null
+    render: True
+
+    neglect_collision_names: ["table"]
+
+    arena_file: workflows/simbox/core/configs/arenas/pick_randomized_arena.yaml
+
+    env_map:
+      envmap_lib: envmap_lib
+      apply_randomization: True
+      intensity_range: [4000, 7000]
+      rotation_range: [0, 180]
+
+    robots:
+      -
+        name: "aloha_mini_pro"
+        robot_config_file: workflows/simbox/core/configs/robots/aloha_mini_pro.yaml
+        euler: [0.0, 0.0, 90.0]
+        constrain_grasp_approach: false
+        left_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
+        right_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
+        left_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        right_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        ignore_substring: ["material", "table"]
+
+    objects:
+      -
+        name: pick_object_left
+        path: ../example_assets/task/sort_the_rubbish/recyclable_garbage/bottle_0/Aligned_obj.usd
+        target_class: RigidObject
+        dataset: oo3d
+        category: bottle
+        prim_path_child: Aligned
+        translation: [0.0, 0.0, 0.0]
+        euler: [0.0, 0.0, 0.0]
+        scale: [1, 1, 1]
+        apply_randomization: False
+        orientation_mode: keep
+        optimize_2d_layout: True
+
+    regions:
+      -
+        object: pick_object_left
+        target: table
+        random_type: A_on_B_region_sampler
+        random_config:
+          pos_range: [
+            [-0.18, -0.20, 0.0],
+            [-0.12, -0.12, 0.0]
+          ]
+          yaw_rotation: [0.0, 0.0]
+      -
+        object: aloha_mini_pro
+        target: table
+        random_type: A_on_B_region_sampler
+        random_config:
+          pos_range: [
+            [-0.20, -0.28, -0.765],
+            [-0.20, -0.28, -0.765]
+          ]
+          # donor arm-base mount is rolled/flipped vs Std: at the Std yaw the Pro
+          # arms face AWAY from the table (home EE world-south, object north)
+          yaw_rotation: [3.1416, 3.1416]
+
+    cameras:
+      -
+        name: aloha_mini_pro_hand_left
+        translation: [0.0, 0.08, 0.05]
+        orientation: [0.0, 0.0, 0.965, 0.259]
+        camera_axes: usd
+        camera_file: workflows/simbox/core/configs/cameras/astra.yaml
+        parent: "aloha_mini_pro/left_Fixed_Jaw"
+        apply_randomization: False
+      -
+        name: aloha_mini_pro_hand_right
+        translation: [0.0, 0.08, 0.04]
+        orientation: [0.0, 0.0, 0.972, 0.233]
+        camera_axes: usd
+        camera_file: workflows/simbox/core/configs/cameras/astra.yaml
+        parent: "aloha_mini_pro/right_Fixed_Jaw"
+        apply_randomization: False
+      -
+        name: aloha_mini_pro_head
+        translation: [0.0, 0.0, 0.55]
+        orientation: [0.658, 0.259, -0.282, -0.648]
+        camera_axes: usd
+        camera_file: workflows/simbox/core/configs/cameras/realsense_d455_v3.yaml
+        parent: "aloha_mini_pro/base_link"
+
+    data:
+      task_dir: "aloha_mini_pro_pick_object"
+      language_instruction: "Pick up the bottle with the left arm."
+      detailed_language_instruction: "Pick up the bottle on the table with the left AlohaMini Pro arm, then return the left arm home."
+      collect_info: ""
+      version: "v2.1, AlohaMini Pro v3 true 6-joint arms, head camera 1280x720, wrist 640x480"
+      update: True
+      max_episode_length: 300
+
+    skills:
+      -
+        aloha_mini_pro:
+          -
+            left:
+              -
+                name: pick
+                objects: [pick_object_left]
+                filter_y_dir: ["forward", 60]
+                filter_z_dir: ["downward", 150]
+                pre_grasp_offset: 0.05
+                gripper_change_steps: 10
+                t_eps: 0.025
+                o_eps: 1
+                process_valid: True
+                lift_th: 0.02
+                post_grasp_offset_min: 0.10
+                post_grasp_offset_max: 0.15
+              -
+                name: heuristic__skill
+                mode: home
+                gripper_state: 1.0
