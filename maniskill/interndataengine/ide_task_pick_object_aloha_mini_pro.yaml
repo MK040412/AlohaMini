@@ -23,7 +23,7 @@ tasks:
         name: "aloha_mini_pro"
         robot_config_file: workflows/simbox/core/configs/robots/aloha_mini_pro.yaml
         euler: [0.0, 0.0, 90.0]
-        constrain_grasp_approach: false
+        constrain_grasp_approach: true
         left_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
         right_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
         left_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -101,7 +101,7 @@ tasks:
       collect_info: ""
       version: "v2.1, AlohaMini Pro v3 true 6-joint arms, head camera 1280x720, wrist 640x480"
       update: True
-      max_episode_length: 300
+      max_episode_length: 600
 
     skills:
       -

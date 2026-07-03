@@ -179,6 +179,21 @@ def register_hab_pick_env() -> None:
 
     @register_env(PICK_ENV_ID, max_episode_steps=200000)
     class AlohaMiniHabPickEnv(scene_base.SceneManipulationEnv):
+        @property
+        def _default_human_render_camera_configs(self):
+            # two synchronized streams: wide follow-cam + gripper close-up (poses are
+            # retargeted every captured frame by the demo)
+            from mani_skill.sensors.camera import CameraConfig
+            from mani_skill.utils import sapien_utils
+
+            pose = sapien_utils.look_at(eye=[0.3, -2.6, 2.5], target=[-2.3, -0.8, 0.85])
+            return [
+                CameraConfig("render_camera", pose=pose, width=1920, height=1080,
+                             fov=1.0, near=0.01, far=100),
+                CameraConfig("closeup_camera", pose=pose, width=1920, height=1080,
+                             fov=0.85, near=0.01, far=100),
+            ]
+
         def _load_scene(self, options: dict):
             super()._load_scene(options)
             from mani_skill.utils.building import actors
@@ -221,16 +236,11 @@ def camera_pose_list(eye, target) -> list[float]:
 
 
 def default_camera_config(shader_pack: str = "minimal") -> dict[str, Any]:
+    # both cameras are DEFINED by AlohaMiniHabPickEnv._default_human_render_camera_configs;
+    # gym.make kwargs may only OVERRIDE attributes of existing cameras (shader etc.)
     return dict(
-        render_camera=dict(
-            pose=camera_pose_list([0.3, -2.6, 2.5], [-2.3, -0.8, 0.85]),
-            width=1920,
-            height=1080,
-            fov=1.0,
-            near=0.01,
-            far=100,
-            shader_pack=shader_pack,
-        )
+        render_camera=dict(shader_pack=shader_pack),
+        closeup_camera=dict(shader_pack=shader_pack),
     )
 
 

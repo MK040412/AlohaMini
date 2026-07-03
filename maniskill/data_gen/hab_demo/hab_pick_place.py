@@ -294,6 +294,14 @@ class Demo:
         self.left_grip_q_ids = [
             self.idx[name] for name in getattr(self.be.agent, "left_gripper_joint_names", []) if name in self.idx
         ]
+        # right-arm twins for bimanual skills (action layout + best_full_pose
+        # already take an arm side; only these handle lists were left-only)
+        self.right_arm_q_ids = [
+            self.idx[name] for name in getattr(self.be.agent, "right_arm_joint_names", []) if name in self.idx
+        ]
+        self.right_grip_q_ids = [
+            self.idx[name] for name in getattr(self.be.agent, "right_gripper_joint_names", []) if name in self.idx
+        ]
 
     def update_follow_camera(self) -> None:
         """Crane-style follow-cam: keep the eye between the robot and the apartment
@@ -415,11 +423,12 @@ class Demo:
         base[1] += self.root_xy[1]
         return base.astype(np.float32)
 
-    def arm_base_xy(self) -> np.ndarray:
+    def arm_base_xy(self, arm: str = "left") -> np.ndarray:
+        name = f"{arm}_base"
         for link in self.robot.get_links():
-            if link.name == "left_base":
+            if link.name == name:
                 return hab_scene.vec3(link.pose.p)[:2].astype(np.float64)
-        raise RuntimeError("left_base link not found")
+        raise RuntimeError(f"{name} link not found")
 
     def left_base_world(self) -> np.ndarray:
         for link in self.robot.get_links():
@@ -561,6 +570,7 @@ class Demo:
         lift: float,
         seed=None,
         require_ik: bool = True,
+        arm: str = "left",
     ):
         q0 = self.qnow()
         rest = self.rest_q
@@ -618,7 +628,7 @@ class Demo:
                 rejected_physics += 1
                 continue
 
-            arm_base = self.arm_base_xy()
+            arm_base = self.arm_base_xy(arm)
             # pick geometry: prefer stations whose approach is ⊥ to the jaw axis so the
             # leading finger passes BESIDE the object during the tilted descent instead
             # of sweeping through it (soft penalty — a thin object may survive ∥)
@@ -636,7 +646,7 @@ class Demo:
                         target_pt,
                         approach_dir,
                         jaw_dir,
-                        arm="left",
+                        arm=arm,
                         lift_position=lift_i,
                         shoulder_lift_seed=1.0,
                         max_iters=160,
@@ -681,8 +691,13 @@ class Demo:
                             float(tilt),
                         )
             # early exit only for a station that is BOTH accurate and (for pick)
-            # unpenalized — best[0] carries the ⊥ penalty, best[3] is raw IK error
-            if best is not None and best[3] < 0.006 and best[0] < 0.012:
+            # unpenalized — best[0] carries the ⊥ penalty, best[3] is raw IK error.
+            # Also require a LEVEL jaw for picks: a 0.10-tilt right-arm station
+            # passed here (tested=2) and the tilted squeeze extruded the shaker
+            # (v19 mechanism) — keep scanning until tilt < 0.05 too.
+            if best is not None and best[3] < 0.006 and best[0] < 0.012 and (
+                label != "pick" or best[9] < 0.05
+            ):
                 break
 
         self.set_q(q0)
