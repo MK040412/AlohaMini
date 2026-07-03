@@ -6,6 +6,7 @@ from .base_agent import (
 )
 from .aloha_mini_so100_v2 import AlohaMiniSO100V2
 from .aloha_mini_pro_v2 import AlohaMiniProV2
+from .aloha_mini_pro_v3 import AlohaMiniProV3
 
 __all__ = [
     "AlohaMiniBaseAgent",

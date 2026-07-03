@@ -18,6 +18,7 @@ import sys, os, numpy as np, torch, gymnasium as gym
 sys.path.insert(0, "/home/perelman/AlohaMini/maniskill")
 sys.path.insert(0, "/tmp/claude-1000/-home-perelman-AlohaMini/2d745dbb-3484-4eaa-af51-d8284661b2bf/scratchpad")
 import mani_skill.envs, data_gen
+import agents.aloha_mini  # noqa: F401  (registers all AlohaMini agent uids incl. pro_v3)
 from grasp_demo_v2 import (SlowGrasp, _best_full_pose, interp,
                            V_ARM, V_ARM_DESCEND, V_LIFT, CLOSE_STEPS, SETTLE, HOLD, FPS, FRAMES_TMP)
 from data_gen.aspire_engine.nav_planner import plan_path
@@ -72,7 +73,7 @@ def main():
     env = gym.make("AlohaMiniMultiYCB-v1", num_envs=1, obs_mode="state",
                    control_mode="pd_joint_pos_fixed_base", render_mode=None if NOREN else "rgb_array",
                    reward_mode="none", sim_backend="physx_cpu", object_ids=[OBJ],
-                   robot_uid="aloha_mini_pro_v2", base_xy=(-0.85, -0.75),
+                   robot_uid=os.environ.get("PRO_UID", "aloha_mini_pro_v2"), base_xy=(-0.85, -0.75),
                    slot_override_xy=[tuple(PICK_XY)],
                    render_eye=[0.60, -1.05, 1.20], render_target=[-0.05, -0.30, 0.80],
                    human_render_camera_configs={} if NOREN else dict(shader_pack="rt-fast", width=W, height=H),

@@ -320,7 +320,7 @@ class AlohaMiniMultiYCBEnv(BaseEnv):
     the existing PickSkill can resolve it dynamically from config.
     """
 
-    SUPPORTED_ROBOTS = [ROBOT, "aloha_mini_pro_v2"]
+    SUPPORTED_ROBOTS = [ROBOT, "aloha_mini_pro_v2", "aloha_mini_pro_v3"]
 
     def __init__(
         self,
