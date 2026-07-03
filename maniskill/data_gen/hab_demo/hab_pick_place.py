@@ -48,6 +48,10 @@ LIFT_HIGH = 0.16
 LIFT_PICK = -0.08
 IK_ACCEPT = 0.035
 STATION_LIFT_SWEEP = tuple(sorted({LIFT_PICK, 0.0, -0.04, -0.08, -0.10, -0.12, -0.15}))
+# place-scan sweeps, module-level so scenario scripts can override (hab_fridge
+# needs realizable positive lifts + low pitches to thread the fridge mouth)
+PLACE_LIFT_SWEEP = (-0.15, -0.12, -0.08, -0.04)
+PLACE_PITCH_SWEEP = (60.0, 70.0)
 # a pick station must exist within this XY ring of the grasp target, else the target
 # is out of arm reach from any free floor cell (e.g. deep on the kitchen counter)
 NUDGE_REACH_RING = 0.52
@@ -219,8 +223,11 @@ class Demo:
         self.open_gripper = float(self.skill.open_gripper)
         self.closed_gripper = float(self.skill.closed_gripper)
         self.frames: list[np.ndarray] = []
+        self._frames2_n = 0
         self._cam_eye: np.ndarray | None = None
         self._cam_tgt: np.ndarray | None = None
+        self._cam2_eye: np.ndarray | None = None
+        self._cam2_tgt: np.ndarray | None = None
         self.marks: dict[str, int] = {}
         self.last_blocker = ""
 
@@ -330,6 +337,39 @@ class Demo:
         pose = hab_scene.camera_pose_list(self._cam_eye.tolist(), self._cam_tgt.tolist())
         cam.set_local_pose(sapien.Pose(pose[:3], pose[3:]))
 
+    def update_closeup_camera(self) -> None:
+        """Gripper-tracking close-up for the two-camera edit: eye 0.55 m from the TCP
+        toward the apartment interior, slightly above, looking at the fingertips."""
+        try:
+            cam = self.be.unwrapped._human_render_cameras["closeup_camera"].camera
+        except Exception:
+            return
+        try:
+            tcp, _, _ = self.left_fingertips_world()
+        except Exception:
+            return
+        tcp = np.asarray(tcp, np.float64)
+        interior = np.array(FOLLOW_CAM_INTERIOR, np.float64)
+        d = interior - tcp[:2]
+        dn = float(np.linalg.norm(d))
+        d = d / dn if dn > 0.3 else np.array([1.0, 0.0])
+        eye = np.array(
+            [
+                float(np.clip(tcp[0] + 0.55 * d[0], -2.55, 4.45)),
+                float(np.clip(tcp[1] + 0.55 * d[1], -8.05, 4.7)),
+                float(tcp[2]) + 0.32,
+            ]
+        )
+        tgt = np.array([tcp[0], tcp[1], tcp[2] - 0.04])
+        if self._cam2_eye is None:
+            self._cam2_eye, self._cam2_tgt = eye, tgt
+        else:
+            a = 0.12
+            self._cam2_eye = (1 - a) * self._cam2_eye + a * eye
+            self._cam2_tgt = (1 - a) * self._cam2_tgt + a * tgt
+        pose = hab_scene.camera_pose_list(self._cam2_eye.tolist(), self._cam2_tgt.tolist())
+        cam.set_local_pose(sapien.Pose(pose[:3], pose[3:]))
+
     def capture(self) -> None:
         if not self.norender:
             self._cap_count = getattr(self, "_cap_count", 0) + 1
@@ -337,6 +377,19 @@ class Demo:
                 return
             self.update_follow_camera()
             self.frames.append(to_u8(self.be.render_rgb_array(camera_name="render_camera")))
+            if os.environ.get("HAB_TWO_CAM"):
+                # close-up stream goes straight to disk: two in-memory 1080p streams
+                # would need ~14 GB
+                import imageio.v2 as imageio
+
+                self.update_closeup_camera()
+                fr2 = to_u8(self.be.render_rgb_array(camera_name="closeup_camera"))
+                d2 = OUT_DIR / "frames2"
+                if self._frames2_n == 0:
+                    shutil.rmtree(d2, ignore_errors=True)
+                    d2.mkdir(exist_ok=True)
+                imageio.imwrite(d2 / f"{self._frames2_n:05d}.png", fr2)
+                self._frames2_n += 1
 
     def qnow(self) -> np.ndarray:
         q = hab_scene.to_numpy(self.robot.get_qpos())
@@ -517,8 +570,8 @@ class Demo:
         if label.startswith("place:"):
             # the single (-0.12, 60°) sweep rejected every NEAR surface and forced
             # 5.5 m carries; the carry only survives ~5 m, so near placements matter
-            lift_values = (-0.15, -0.12, -0.08, -0.04)
-            pitch_values = (60.0, 70.0)
+            lift_values = tuple(PLACE_LIFT_SWEEP)
+            pitch_values = tuple(PLACE_PITCH_SWEEP)
         else:
             lift_values = tuple(sorted({float(lift), *[float(v) for v in STATION_LIFT_SWEEP]}))
             pitch_values = tuple(dict.fromkeys([float(PITCH), *[float(v) for v in STATION_PITCHES]]))
@@ -958,6 +1011,11 @@ class Demo:
         lbw = self.left_base_world()
         approach_dir = desired_approach_dir(grasp_pt, pick_pitch, base_xy=tuple(lbw[:2])).astype(np.float32)
         pre_pt = (grasp_pt - approach_dir * PICK_BACK).astype(np.float32)
+        # cap the hover height: for high grasps (kitchen counter ~0.94) the naive
+        # 60-deg back-off point sits above the arm's ceiling and the approach IK
+        # diverges; a flatter hover is fine — the descent chain re-solves toward the
+        # grasp and the tip-servo closes the residual
+        pre_pt[2] = min(float(pre_pt[2]), float(grasp_pt[2]) + 0.06)
         # seed from the station scan's solved branch — a fresh solve can fall into a
         # 4 cm-worse IK branch (v11: scan 0.0031 vs execution 0.0387). If even the
         # seeded re-solve diverges, KEEP the scan's validated solution: the NAV
@@ -1103,7 +1161,7 @@ class Demo:
             tip_mid, _, _ = self.left_fingertips_world()
             tip_err = np.asarray(grasp_pt, np.float64) - np.asarray(tip_mid, np.float64)
             tip_n = float(np.linalg.norm(tip_err))
-            if not (0.004 < tip_n < 0.09):
+            if not (0.004 < tip_n < 0.18):
                 break
             cum_target = cum_target + tip_err
             servo = best_full_pose(
@@ -1543,6 +1601,20 @@ def main() -> None:
             if success and not norender:
                 if demo.frames:
                     encode(demo.frames, VIDEO_PATH)
+                if getattr(demo, "_frames2_n", 0) > 0:
+                    subprocess.run(
+                        ["ffmpeg", "-y", "-framerate", str(FPS),
+                         "-i", str(OUT_DIR / "frames2" / "%05d.png"),
+                         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20",
+                         "-preset", "veryfast", str(OUT_DIR / "hab_closeup.mp4")],
+                        check=False,
+                    )
+                    import json as _json
+
+                    (OUT_DIR / "hab_marks.json").write_text(
+                        _json.dumps({"marks": demo.marks, "n_frames": len(demo.frames)})
+                    )
+                    print(f"[TWOCAM] closeup frames={demo._frames2_n} marks={demo.marks}", flush=True)
                 if not VIDEO_PATH.exists() or VIDEO_PATH.stat().st_size == 0:
                     success = False
                     info = dict(
