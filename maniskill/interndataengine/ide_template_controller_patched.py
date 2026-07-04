@@ -431,6 +431,8 @@ class TemplateController(BaseController):
                         cmd_plan = result.get_interpolated_plan()
                         self.idx_list = list(range(len(self.raw_js_names)))
                         self.cmd_plan = cmd_plan.get_ordered_joint_state(self.raw_js_names)
+                        print(f"[PLANLEN] {self.lr_name} n={len(self.cmd_plan)} "
+                              f"motion_time={getattr(result, 'motion_time', None)}", flush=True)
                         self.num_plan_failed = 0
                     else:
                         print("Plan did not converge to a solution.")
@@ -454,6 +456,14 @@ class TemplateController(BaseController):
         else:
             art_action = ArticulationAction(joint_positions=sim_js.positions[self.arm_indices])
         self._step_idx += 1
+        if self._step_idx % 25 == 0:
+            try:
+                _ep, _eq = self.get_ee_pose()
+                print(f"[EETRACE] {self.lr_name} step={self._step_idx} "
+                      f"ee={np.round(_ep,3).tolist()} tgt={np.round(np.asarray(self._ee_trans.cpu() if hasattr(self._ee_trans,'cpu') else self._ee_trans).reshape(-1),3).tolist()} "
+                      f"grip_state={self._gripper_state}", flush=True)
+            except Exception:
+                pass
         arm_action = art_action.joint_positions
         gripper_action = self.get_gripper_action()
         joint_positions = np.concatenate([arm_action, gripper_action])
@@ -551,6 +561,10 @@ class TemplateController(BaseController):
             print("Success")
             return 1
         print("Plan did not converge to a solution.")
+        import numpy as _np
+        print(f"[FEASDBG] status={result.status} valid_query={result.valid_query} "
+              f"goal_p={_np.round(_np.asarray(ee_trans).reshape(-1),4).tolist()} "
+              f"goal_q={_np.round(_np.asarray(ee_ori).reshape(-1),4).tolist()}")
         return 0
 
     def pre_forward(self, ee_trans: np.ndarray, ee_ori: np.ndarray, expected_js=None, ds_ratio=1):

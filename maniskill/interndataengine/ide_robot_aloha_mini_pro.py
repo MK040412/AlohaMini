@@ -37,6 +37,19 @@ class AlohaMiniPro(TemplateRobot):
         self.fl_forbid_collision_paths = [f"{self.robot_prim_path}/{p}" for p in self.cfg["fl_forbid_collision_paths"]]
         self.fr_forbid_collision_paths = [f"{self.robot_prim_path}/{p}" for p in self.cfg["fr_forbid_collision_paths"]]
 
+    def _calculate_ee_position(self, T_obj_tcp, depths, tcp_offset):
+        # Pro v3 Fixed_Jaw frame (donor chain) has the opposite finger-axis
+        # sense vs Std: the template's ee = tcp + axis*(depth - tcp_offset)
+        # plants the wrist one tcp_offset PAST the grasp point (measured
+        # |d|~0.18 m at close). Flip the compensation sign.
+        tcp_center = T_obj_tcp[:, 0:3, 3]
+        axis_map = {"x": 0, "y": 1, "z": 2}
+        axis = T_obj_tcp[:, 0:3, axis_map[self._get_ee_axis()]]
+        ee_center = tcp_center + axis * (tcp_offset - depths)
+        T_obj_ee = T_obj_tcp.copy()
+        T_obj_ee[:, 0:3, 3] = ee_center
+        return T_obj_ee
+
     def _get_gripper_state(self, gripper_home):
         return 1.0 if gripper_home and gripper_home[0] >= 0.02 else -1.0
 
@@ -47,3 +60,27 @@ class AlohaMiniPro(TemplateRobot):
                 np.array([500.0] * len(all_joint_indices)),
                 joint_indices=np.array(all_joint_indices),
             )
+        # The converted Pro USD ships with damping=0 on every arm/finger/lift
+        # drive (Std has stiffness/10); an undamped position drive + the
+        # hold-current command pattern is an energy pump and the arms thrash.
+        # Match the Std gain profile at runtime.
+        try:
+            arm = np.array(self.left_joint_indices + self.right_joint_indices)
+            self._articulation_view.set_gains(
+                kps=np.full(len(arm), 35809.9), kds=np.full(len(arm), 3581.0),
+                joint_indices=arm,
+            )
+            self._articulation_view.set_max_efforts(np.full(len(arm), 100.0), joint_indices=arm)
+            fin = np.array(self.left_gripper_indices + self.right_gripper_indices)
+            self._articulation_view.set_gains(
+                kps=np.full(len(fin), 625.0), kds=np.full(len(fin), 62.5),
+                joint_indices=fin,
+            )
+            lift = np.array(self.lift_indices)
+            self._articulation_view.set_gains(
+                kps=np.full(len(lift), 625.0), kds=np.full(len(lift), 62.5),
+                joint_indices=lift,
+            )
+            print("[GAINS] Pro drives re-gained (arm kd=3581, finger/lift kd=62.5)", flush=True)
+        except Exception as exc:
+            print(f"[GAINS] failed: {exc}", flush=True)

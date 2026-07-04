@@ -55,15 +55,15 @@ tasks:
             [-0.18, -0.20, 0.0],
             [-0.12, -0.12, 0.0]
           ]
-          yaw_rotation: [0.0, 0.0]
+          yaw_rotation: [3.1416, 3.1416]
       -
         object: aloha_mini_pro
         target: table
         random_type: A_on_B_region_sampler
         random_config:
           pos_range: [
-            [-0.20, -0.28, -0.765],
-            [-0.20, -0.28, -0.765]
+            [-0.16, -0.21, -0.765],
+            [-0.16, -0.21, -0.765]
           ]
           # donor arm-base mount is rolled/flipped vs Std: at the Std yaw the Pro
           # arms face AWAY from the table (home EE world-south, object north)
@@ -101,7 +101,7 @@ tasks:
       collect_info: ""
       version: "v2.1, AlohaMini Pro v3 true 6-joint arms, head camera 1280x720, wrist 640x480"
       update: True
-      max_episode_length: 600
+      max_episode_length: 1800
 
     skills:
       -
@@ -113,6 +113,8 @@ tasks:
                 objects: [pick_object_left]
                 filter_y_dir: ["forward", 60]
                 filter_z_dir: ["downward", 150]
+                # world-frame grasp calibration = -(tip-obj) measured at close
+                world_trans_offset: [0.031, 0.121, 0.098]
                 pre_grasp_offset: 0.05
                 gripper_change_steps: 10
                 t_eps: 0.025
