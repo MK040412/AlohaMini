@@ -15,7 +15,10 @@ class AlohaMiniPro(TemplateRobot):
         self.right_joint_indices = self.cfg["right_joint_indices"]
         self.left_gripper_indices = self.cfg["left_gripper_indices"]
         self.right_gripper_indices = self.cfg["right_gripper_indices"]
-        self.body_indices = []
+        # root_z_rotation (dof 2): rotate the chassis 180deg so the TRUE front
+        # faces the table (user correction; the sampler yaw_rotation does not
+        # rotate the articulation root)
+        self.body_indices = [2]
         self.head_indices = []
         self.lift_indices = self.cfg["lift_indices"]
 

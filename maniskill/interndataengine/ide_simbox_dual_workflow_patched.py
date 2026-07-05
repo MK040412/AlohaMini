@@ -536,8 +536,8 @@ class SimBoxDualWorkFlow(NimbusWorkFlow):
                             self._dbgcam_set = True
                             from omni.isaac.core.prims import XFormPrim as _XF
                             from scipy.spatial.transform import Rotation as _R
-                            _eye = _np.array([0.55, -0.75, 1.15])
-                            _tgt = _np.array([-0.05, -0.10, 0.80])
+                            _eye = _np.array([0.95, -1.05, 1.45])
+                            _tgt = _np.array([0.18, -0.25, 0.80])
                             _f = _tgt - _eye; _f /= _np.linalg.norm(_f)
                             _r = _np.cross(_f, [0.0, 0.0, 1.0]); _r /= _np.linalg.norm(_r)
                             _u = _np.cross(_r, _f)
@@ -794,8 +794,8 @@ class SimBoxDualWorkFlow(NimbusWorkFlow):
                             self._dbgcam_set = True
                             from omni.isaac.core.prims import XFormPrim as _XF
                             from scipy.spatial.transform import Rotation as _R
-                            _eye = _np.array([0.55, -0.75, 1.15])
-                            _tgt = _np.array([-0.05, -0.10, 0.80])
+                            _eye = _np.array([0.95, -1.05, 1.45])
+                            _tgt = _np.array([0.18, -0.25, 0.80])
                             _f = _tgt - _eye; _f /= _np.linalg.norm(_f)
                             _r = _np.cross(_f, [0.0, 0.0, 1.0]); _r /= _np.linalg.norm(_r)
                             _u = _np.cross(_r, _f)

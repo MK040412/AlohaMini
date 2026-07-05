@@ -64,12 +64,13 @@ tasks:
         random_type: A_on_B_region_sampler
         random_config:
           pos_range: [
-            [0.03, -0.43, -0.765],
-            [0.03, -0.43, -0.765]
+            [0.34, -0.52, -0.765],
+            [0.34, -0.52, -0.765]
           ]
-          # arms are SIDE-mounted: yaw -90deg turns the trunk to face the table
-          # with the left mount overhanging the south edge (maniskill layout)
-          yaw_rotation: [-1.5708, -1.5708]
+          # user correction: at -90 the robot showed its BACK to the table;
+          # the true front faces the table at +90 (root recomputed so the
+          # left mount stays at the measured sweet spot (0.185, -0.476))
+          yaw_rotation: [1.5708, 1.5708]
 
     cameras:
       -
