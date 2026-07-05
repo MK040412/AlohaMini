@@ -33,7 +33,7 @@ tasks:
     objects:
       -
         name: pick_object_left
-        path: ../example_assets/task/sort_the_rubbish/recyclable_garbage/bottle_0/Aligned_obj.usd
+        path: ../example_assets/task/sort_the_rubbish/non_recyclable_garbage/obj_8/Aligned_obj.usd
         target_class: RigidObject
         dataset: oo3d
         category: bottle
@@ -51,9 +51,11 @@ tasks:
         target: table
         random_type: A_on_B_region_sampler
         random_config:
+          # south-edge band within the Pro mount's ~0.17m reach
+          # (table footprint y in [-0.425, 0.425]; mount at (-0.187, -0.473))
           pos_range: [
-            [-0.18, -0.20, 0.0],
-            [-0.12, -0.12, 0.0]
+            [0.00, -0.36, 0.0],
+            [0.12, -0.30, 0.0]
           ]
           yaw_rotation: [3.1416, 3.1416]
       -
@@ -62,8 +64,8 @@ tasks:
         random_type: A_on_B_region_sampler
         random_config:
           pos_range: [
-            [-0.16, -0.21, -0.765],
-            [-0.16, -0.21, -0.765]
+            [-0.10, -0.43, -0.765],
+            [-0.10, -0.43, -0.765]
           ]
           # donor arm-base mount is rolled/flipped vs Std: at the Std yaw the Pro
           # arms face AWAY from the table (home EE world-south, object north)
@@ -101,7 +103,7 @@ tasks:
       collect_info: ""
       version: "v2.1, AlohaMini Pro v3 true 6-joint arms, head camera 1280x720, wrist 640x480"
       update: True
-      max_episode_length: 1800
+      max_episode_length: 1400
 
     skills:
       -
@@ -109,21 +111,13 @@ tasks:
           -
             left:
               -
-                name: pick
+                name: scripted_pick
                 objects: [pick_object_left]
-                filter_y_dir: ["forward", 60]
-                filter_z_dir: ["downward", 150]
-                # world-frame grasp calibration = -(tip-obj) measured at close
-                world_trans_offset: [0.031, 0.121, 0.098]
                 pre_grasp_offset: 0.05
-                gripper_change_steps: 10
+                gripper_change_steps: 15
                 t_eps: 0.025
                 o_eps: 1
                 process_valid: True
                 lift_th: 0.02
                 post_grasp_offset_min: 0.10
                 post_grasp_offset_max: 0.15
-              -
-                name: heuristic__skill
-                mode: home
-                gripper_state: 1.0

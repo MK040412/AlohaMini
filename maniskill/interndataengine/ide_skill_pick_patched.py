@@ -85,7 +85,8 @@ class Pick(BaseSkill):
 
         # Pre grasp
         print(f"[GENDBG] simple_generate_manip_cmds ENTER use_batch={self.controller.use_batch}", flush=True)
-        T_base_ee_grasps = self.sample_ee_pose()  # (N, 4, 4)
+        T_base_ee_grasps = self.sample_ee_pose(
+            max_length=self.skill_cfg.get("num_grasp_candidates", 20))  # (N, 4, 4)
         print(f"[GENDBG] T_base_ee_grasps shape={T_base_ee_grasps.shape} "
               f"|pos|max={np.abs(T_base_ee_grasps[:, :3, 3]).max():.3e} "
               f"pos0={T_base_ee_grasps[0, :3, 3].round(3).tolist()}", flush=True)
@@ -290,17 +291,20 @@ class Pick(BaseSkill):
         if frame == "body":
             return self.T_obj_ee
 
-        # Grasp candidates in the npy are expressed in the object's "Aligned"
-        # sub-frame (the same frame the collision mesh lives in). Use that
-        # prim's WORLD transform; the object root's world pose still misses the
-        # Aligned prim's internal offset (measured (-5,-13,+11) cm on the Pro
-        # scene), and get_local_pose() was wrong whenever the parent moved.
-        T_world_obj = tf_matrix_from_pose(*self.pick_obj.get_world_pose())
-        _wto = self.skill_cfg.get("world_trans_offset", None)
-        if _wto is not None:
-            # world-frame grasp calibration measured by the tip-vs-obj probe
-            T_world_obj = T_world_obj.copy()
-            T_world_obj[:3, 3] += np.asarray(_wto, dtype=T_world_obj.dtype)
+        # Frame consistency: the "armbase" branch below measures the arm base
+        # relative to task.root_prim_path, so the object MUST be expressed in
+        # the SAME frame. get_local_pose() is parent-relative (the object's
+        # Aligned prim is one level below the object root, not the task root)
+        # and get_world_pose() is /World-relative — both mix frames whenever
+        # the hierarchy or task root carries a transform. Measure it directly.
+        try:
+            from omni.isaac.core.utils.transformations import get_relative_transform as _grt
+            from omni.isaac.core.utils.prims import get_prim_at_path as _gpp
+            T_world_obj = _grt(self.pick_obj.prim, _gpp(self.task.root_prim_path))
+            print(f"[FRAMEAUDIT] root-rel obj_t={np.round(T_world_obj[:3,3],3).tolist()}", flush=True)
+        except Exception as _e:
+            print(f"[FRAMEAUDIT] fallback local: {_e}", flush=True)
+            T_world_obj = tf_matrix_from_pose(*self.pick_obj.get_local_pose())
         try:
             print(f"[FLTDBG] obj_world_pose={self.pick_obj.get_world_pose()} "
                   f"|T_world_obj|max={np.abs(T_world_obj).max():.3e} "
@@ -309,6 +313,14 @@ class Pick(BaseSkill):
         except Exception as _e:  # pylint: disable=broad-except
             print("[FLTDBG] err", _e, flush=True)
         T_world_ee = T_world_obj[None] @ self.T_obj_ee
+        try:
+            _pad = T_world_ee[0] @ np.array([0.0, -0.091, 0.0, 1.0])
+            print(f"[GENPAD] obj_w={np.round(T_world_obj[:3,3],3).tolist()} "
+                  f"ee0_w={np.round(T_world_ee[0,:3,3],3).tolist()} "
+                  f"pad0_w={np.round(_pad[:3],3).tolist()} "
+                  f"pad-obj={np.round(_pad[:3]-T_world_obj[:3,3],3).tolist()}", flush=True)
+        except Exception:
+            pass
 
         if frame == "world":
             return T_world_ee
@@ -334,6 +346,8 @@ class Pick(BaseSkill):
                     b_str = f"pos={np.round(np.asarray(rp[0]),4).tolist()}" if rp is not None else "n/a"
                 except Exception as _e3:  # pylint: disable=broad-except
                     b_str = f"ERR {_e3}"
+                print(f"[BASEMAT] {np.round(T_world_base,5).tolist()}", flush=True)
+                print(f"[OBJMAT] {np.round(tf_matrix_from_pose(*self.pick_obj.get_world_pose()),5).tolist()}", flush=True)
                 print(f"[BASEDBG] USD_T_world_base Z={T_world_base[2,3]:.3e} X={T_world_base[0,3]:.3f} Y={T_world_base[1,3]:.3f}\n"
                       f"[BASEDBG]   XFormPrim.get_world_pose(left_Base): {a_str}\n"
                       f"[BASEDBG]   robot.get_world_pose(root): {b_str}", flush=True)
@@ -378,10 +392,18 @@ class Pick(BaseSkill):
                     get_prim_at_path(self.robot.fl_ee_path),
                     get_prim_at_path("/World"))
                 tip = (T_we @ _np.array([0.0, -0.10, 0.0, 1.0]))[:3]
+                T_wb = get_relative_transform(
+                    get_prim_at_path(self.robot.fl_base_path),
+                    get_prim_at_path("/World"))
+                ee_prim_b = _np.linalg.inv(T_wb) @ T_we
+                cur_p, cur_q = self.controller.get_ee_pose()
+                nxt = self.manip_list[0] if self.manip_list else None
+                tgt = _np.round(_np.asarray(nxt[0]).reshape(-1), 3).tolist() if nxt is not None else None
                 print(f"[SUBPOP] remaining={len(self.manip_list)} "
-                      f"cmd={self.manip_list[0][2] if self.manip_list else 'END'} "
+                      f"cmd={nxt[2] if nxt else 'END'} "
                       f"obj={_np.round(op,3).tolist()} tip={_np.round(tip,3).tolist()} "
-                      f"d={_np.round(tip-op,3).tolist()}", flush=True)
+                      f"d={_np.round(tip-op,3).tolist()} | curobo_ee={_np.round(cur_p,3).tolist()} "
+                      f"prim_ee_b={_np.round(ee_prim_b[:3,3],3).tolist()} tgt={tgt}", flush=True)
             except Exception as _e:
                 print(f"[SUBPOP] dbg {_e}", flush=True)
         return len(self.manip_list) == 0

@@ -67,7 +67,7 @@ fr_forbid_collision_paths:
   - "right_link3"
   - "right_link4"
 
-R_ee_graspnet: [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]]
+R_ee_graspnet: [[0.0, -1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]]
 ee_axis: "y"
 
 left_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
@@ -76,4 +76,4 @@ left_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 right_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 left_gripper_home: [0.037, 0.037]
 right_gripper_home: [0.037, 0.037]
-lift_home: [0.05]
+lift_home: [0.13]

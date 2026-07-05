@@ -446,13 +446,23 @@ class TemplateController(BaseController):
                     cmd_state.velocity.cpu().numpy() * 0.0,
                     joint_indices=self.idx_list,
                 )
+                # remember the plan's target so idle holds keep pushing toward
+                # it instead of re-targeting the measured (sagging) position
+                self._hold_target = cmd_state.position.cpu().numpy().copy()
                 self.cmd_idx += self.ds_ratio
                 if self.cmd_idx >= len(self.cmd_plan):
                     self.cmd_idx = 0
                     self.cmd_plan = None
             else:
                 self.num_last_cmd += 1
-                art_action = ArticulationAction(joint_positions=sim_js.positions[self.arm_indices])
+                # commanding positions[arm_indices] back每step is a gravity
+                # ratchet (the reference follows the sag); hold the last plan
+                # target instead when we have one
+                hold = getattr(self, "_hold_target", None)
+                if hold is not None:
+                    art_action = ArticulationAction(joint_positions=hold, joint_indices=self.idx_list)
+                else:
+                    art_action = ArticulationAction(joint_positions=sim_js.positions[self.arm_indices])
         else:
             art_action = ArticulationAction(joint_positions=sim_js.positions[self.arm_indices])
         self._step_idx += 1

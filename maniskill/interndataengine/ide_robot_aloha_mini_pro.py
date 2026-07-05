@@ -38,14 +38,14 @@ class AlohaMiniPro(TemplateRobot):
         self.fr_forbid_collision_paths = [f"{self.robot_prim_path}/{p}" for p in self.cfg["fr_forbid_collision_paths"]]
 
     def _calculate_ee_position(self, T_obj_tcp, depths, tcp_offset):
-        # Pro v3 Fixed_Jaw frame (donor chain) has the opposite finger-axis
-        # sense vs Std: the template's ee = tcp + axis*(depth - tcp_offset)
-        # plants the wrist one tcp_offset PAST the grasp point (measured
-        # |d|~0.18 m at close). Flip the compensation sign.
+        # Place the finger PADS on the graspnet grasp point. The Pro Fixed_Jaw
+        # pads sit at (0, -0.091, 0) in the EE frame, so ee = tcp + 0.091*y_ee.
+        # (The Std formula tcp + y*(depth - tcp_offset) leaves the pads
+        # ~0.17 m short along -y — measured radially constant across grasps.)
         tcp_center = T_obj_tcp[:, 0:3, 3]
         axis_map = {"x": 0, "y": 1, "z": 2}
         axis = T_obj_tcp[:, 0:3, axis_map[self._get_ee_axis()]]
-        ee_center = tcp_center + axis * (tcp_offset - depths)
+        ee_center = tcp_center + axis * 0.091
         T_obj_ee = T_obj_tcp.copy()
         T_obj_ee[:, 0:3, 3] = ee_center
         return T_obj_ee
@@ -73,9 +73,10 @@ class AlohaMiniPro(TemplateRobot):
             self._articulation_view.set_max_efforts(np.full(len(arm), 100.0), joint_indices=arm)
             fin = np.array(self.left_gripper_indices + self.right_gripper_indices)
             self._articulation_view.set_gains(
-                kps=np.full(len(fin), 625.0), kds=np.full(len(fin), 62.5),
+                kps=np.full(len(fin), 2000.0), kds=np.full(len(fin), 100.0),
                 joint_indices=fin,
             )
+            self._articulation_view.set_max_efforts(np.full(len(fin), 80.0), joint_indices=fin)
             lift = np.array(self.lift_indices)
             self._articulation_view.set_gains(
                 kps=np.full(len(lift), 625.0), kds=np.full(len(lift), 62.5),

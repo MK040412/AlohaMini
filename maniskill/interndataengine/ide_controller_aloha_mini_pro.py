@@ -38,12 +38,26 @@ class AlohaMiniProController(TemplateController):
     def get_gripper_action(self):
         return np.clip(self._gripper_state * self._gripper_joint_position, 0.0, 0.037)
 
+    def lift_ctrl(self, target: float = 0.13):
+        """Command the dedicated vertical_move joint (dof 3) directly; the arm
+        holds its current commanded pose. Vertical descents/ascends through
+        this joint need no CuRobo plan at all."""
+        try:
+            self.robot._articulation_view.set_joint_position_targets(
+                np.array([float(target)]), joint_indices=np.array([3]))
+        except Exception as exc:
+            print(f"[LIFTCTRL] {exc}", flush=True)
+        return None
+
     def forward(self, manip_cmd, eps=5e-3):
         ee_trans, ee_ori = manip_cmd[0:2]
         gripper_fn = manip_cmd[2]
         params = manip_cmd[3]
         assert hasattr(self, gripper_fn)
         method = getattr(self, gripper_fn)
+        if gripper_fn == "lift_ctrl":
+            method(**params)
+            return self.ee_forward(ee_trans, ee_ori, eps=eps, skip_plan=True)
         if gripper_fn in ["in_plane_rotation", "mobile_move", "dummy_forward", "joint_ctrl"]:
             return method(**params)
         elif gripper_fn in ["update_pose_cost_metric", "update_specific"]:
