@@ -1,0 +1,27 @@
+name: simbox_plan
+load_stage:
+  scene_loader:                            # Scene loader
+    type: env_loader
+    args:
+      workflow_type: SimBoxDualWorkFlow
+      cfg_path: workflows/simbox/core/configs/tasks/basic/aloha_mini_pro/sort_rubbish.yaml
+      simulator:
+        physics_dt: 1/30                   # Physics update rate
+        rendering_dt: 1/30                 # Render update rate
+        stage_units_in_meters: 1.0         # Stage unit scale
+        headless: True                     # Headless mode (no GUI)
+        anti_aliasing: 0                   # Anti-aliasing level
+  layout_random_generator:                 # Scene randomization
+    type: env_randomizer
+    args:
+      random_num: 1                        # Number of random samples per task
+      strict_mode: true                    # true: output count must equal random_num
+plan_stage:
+  seq_planner:                             # Trajectory planner (plan only, no rendering)
+    type: env_planner
+store_stage:
+  writer:                                  # Data writer
+    type: env_writer
+    args:
+      batch_async: true                    # Async writes (better perf, more memory)
+      seq_output_dir: output/${name}/      # Trajectory output directory

@@ -44,6 +44,18 @@ tasks:
         apply_randomization: False
         orientation_mode: keep
         optimize_2d_layout: True
+      -
+        name: garbage_can
+        path: ../example_assets/task/sort_the_rubbish/garbage_can/nonrecyclable_can/Aligned_obj.usd
+        target_class: GeometryObject
+        dataset: gso
+        category: box
+        prim_path_child: Aligned
+        translation: [0.0, 0.0, 0.0]
+        euler: [90.0, 0.0, 0.0]
+        # native 0.461 x 0.651(h) x 0.4625 -> mini can: mouth ~11.5cm, height ~10cm
+        scale: [0.25, 0.154, 0.25]
+        apply_randomization: False
 
     regions:
       -
@@ -52,12 +64,23 @@ tasks:
         random_type: A_on_B_region_sampler
         random_config:
           # south-edge band within the Pro mount's ~0.17m reach
-          # (table footprint y in [-0.425, 0.425]; mount at (-0.187, -0.473))
+          # (table footprint y in [-0.425, 0.425]; mount at (0.183, -0.483))
           pos_range: [
-            [0.13, -0.36, 0.0],
-            [0.25, -0.30, 0.0]
+            [0.12, -0.36, 0.0],
+            [0.16, -0.31, 0.0]
           ]
           yaw_rotation: [3.1416, 3.1416]
+      -
+        object: garbage_can
+        target: table
+        random_type: A_on_B_region_sampler
+        random_config:
+          # right of the pick band, still inside the left arm's reach
+          pos_range: [
+            [0.28, -0.36, 0.0],
+            [0.28, -0.36, 0.0]
+          ]
+          yaw_rotation: [0.0, 0.0]
       -
         object: aloha_mini_pro
         target: table
@@ -67,9 +90,6 @@ tasks:
             [0.34, -0.52, -0.765],
             [0.34, -0.52, -0.765]
           ]
-          # user correction: at -90 the robot showed its BACK to the table;
-          # the true front faces the table at +90 (root recomputed so the
-          # left mount stays at the measured sweet spot (0.185, -0.476))
           yaw_rotation: [1.5708, 1.5708]
 
     cameras:
@@ -100,13 +120,13 @@ tasks:
         parent: "aloha_mini_pro/base_link"
 
     data:
-      task_dir: "aloha_mini_pro_pick_object"
-      language_instruction: "Pick up the bottle with the left arm."
-      detailed_language_instruction: "Pick up the bottle on the table with the left AlohaMini Pro arm, then return the left arm home."
+      task_dir: "aloha_mini_pro_sort_rubbish"
+      language_instruction: "Pick up the garbage with the left arm and drop it into the garbage can."
+      detailed_language_instruction: "Pick up the garbage on the table with the left AlohaMini Pro arm and drop it into the garbage can on the right."
       collect_info: ""
-      version: "v2.1, AlohaMini Pro v3 true 6-joint arms, head camera 1280x720, wrist 640x480"
+      version: "v1.0, AlohaMini Pro sort_the_rubbish transplant, head camera 1280x720, wrist 640x480"
       update: True
-      max_episode_length: 1400
+      max_episode_length: 1800
 
     skills:
       -
@@ -124,3 +144,13 @@ tasks:
                 lift_th: 0.02
                 post_grasp_offset_min: 0.10
                 post_grasp_offset_max: 0.15
+              -
+                name: scripted_place
+                objects: [pick_object_left, garbage_can]
+                # rim clearance: pads reach pad_above-0.091 over the rim, so
+                # 0.14 leaves ~5cm — below that CuRobo's collision margin on
+                # the can kills the hover IK (observed IK_FAIL x61)
+                pad_above: 0.14
+                gripper_change_steps: 15
+                t_eps: 0.025
+                o_eps: 1

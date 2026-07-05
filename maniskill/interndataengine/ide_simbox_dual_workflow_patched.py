@@ -530,14 +530,39 @@ class SimBoxDualWorkFlow(NimbusWorkFlow):
                     import imageio.v2 as _iio
                     import numpy as _np
                     for _cn, _cam in self.task.cameras.items():
+                        if os.environ.get("IDE_RAWCAM"):
+                            if os.environ.get("IDE_HEADFIX") and "head" in _cn and not getattr(self, "_headfix_done", False):
+                                self._headfix_done = True
+                                from omni.isaac.core.prims import XFormPrim as _XF
+                                from scipy.spatial.transform import Rotation as _R
+                                _eye = _np.array([0.34, -0.455, 1.08])
+                                _tgt = _np.array([0.22, -0.28, 0.75])
+                                _f = _tgt - _eye; _f /= _np.linalg.norm(_f)
+                                _r = _np.cross(_f, [0.0, 0.0, 1.0]); _r /= _np.linalg.norm(_r)
+                                _u = _np.cross(_r, _f)
+                                _rot = _np.stack([_r, _u, -_f], axis=1)
+                                _q = _R.from_matrix(_rot).as_quat()
+                                _XF(_cam.prim_path).set_world_pose(
+                                    _eye, _np.array([_q[3], _q[0], _q[1], _q[2]]))
+                                _lt, _lq = _cam.get_local_pose(camera_axes="usd")
+                                print(f"[HEADFIX] local_t={_np.round(_np.asarray(_lt),4).tolist()} "
+                                      f"local_q_wxyz={_np.round(_np.asarray(_lq),4).tolist()}", flush=True)
+                            _img = _cam.get_observations()["color_image"]
+                            _tag = "head" if "head" in _cn else ("wl" if "left" in _cn else "wr")
+                            _k = getattr(self, "_raw_n", {})
+                            _k[_tag] = _k.get(_tag, 0) + 1
+                            self._raw_n = _k
+                            _iio.imwrite(f"/tmp/ide_frames/{_tag}{_k[_tag]:05d}.png",
+                                         _np.asarray(_img)[..., :3].astype(_np.uint8))
+                            continue
                         if "head" not in _cn:
                             continue
                         if not getattr(self, "_dbgcam_set", False):
                             self._dbgcam_set = True
                             from omni.isaac.core.prims import XFormPrim as _XF
                             from scipy.spatial.transform import Rotation as _R
-                            _eye = _np.array([0.95, -1.05, 1.45])
-                            _tgt = _np.array([0.18, -0.25, 0.80])
+                            _eye = _np.array([-0.65, 0.15, 1.15])
+                            _tgt = _np.array([0.22, -0.36, 0.78])
                             _f = _tgt - _eye; _f /= _np.linalg.norm(_f)
                             _r = _np.cross(_f, [0.0, 0.0, 1.0]); _r /= _np.linalg.norm(_r)
                             _u = _np.cross(_r, _f)
@@ -788,14 +813,39 @@ class SimBoxDualWorkFlow(NimbusWorkFlow):
                     import imageio.v2 as _iio
                     import numpy as _np
                     for _cn, _cam in self.task.cameras.items():
+                        if os.environ.get("IDE_RAWCAM"):
+                            if os.environ.get("IDE_HEADFIX") and "head" in _cn and not getattr(self, "_headfix_done", False):
+                                self._headfix_done = True
+                                from omni.isaac.core.prims import XFormPrim as _XF
+                                from scipy.spatial.transform import Rotation as _R
+                                _eye = _np.array([0.34, -0.455, 1.08])
+                                _tgt = _np.array([0.22, -0.28, 0.75])
+                                _f = _tgt - _eye; _f /= _np.linalg.norm(_f)
+                                _r = _np.cross(_f, [0.0, 0.0, 1.0]); _r /= _np.linalg.norm(_r)
+                                _u = _np.cross(_r, _f)
+                                _rot = _np.stack([_r, _u, -_f], axis=1)
+                                _q = _R.from_matrix(_rot).as_quat()
+                                _XF(_cam.prim_path).set_world_pose(
+                                    _eye, _np.array([_q[3], _q[0], _q[1], _q[2]]))
+                                _lt, _lq = _cam.get_local_pose(camera_axes="usd")
+                                print(f"[HEADFIX] local_t={_np.round(_np.asarray(_lt),4).tolist()} "
+                                      f"local_q_wxyz={_np.round(_np.asarray(_lq),4).tolist()}", flush=True)
+                            _img = _cam.get_observations()["color_image"]
+                            _tag = "head" if "head" in _cn else ("wl" if "left" in _cn else "wr")
+                            _k = getattr(self, "_raw_n", {})
+                            _k[_tag] = _k.get(_tag, 0) + 1
+                            self._raw_n = _k
+                            _iio.imwrite(f"/tmp/ide_frames/{_tag}{_k[_tag]:05d}.png",
+                                         _np.asarray(_img)[..., :3].astype(_np.uint8))
+                            continue
                         if "head" not in _cn:
                             continue
                         if not getattr(self, "_dbgcam_set", False):
                             self._dbgcam_set = True
                             from omni.isaac.core.prims import XFormPrim as _XF
                             from scipy.spatial.transform import Rotation as _R
-                            _eye = _np.array([0.95, -1.05, 1.45])
-                            _tgt = _np.array([0.18, -0.25, 0.80])
+                            _eye = _np.array([-0.65, 0.15, 1.15])
+                            _tgt = _np.array([0.22, -0.36, 0.78])
                             _f = _tgt - _eye; _f /= _np.linalg.norm(_f)
                             _r = _np.cross(_f, [0.0, 0.0, 1.0]); _r /= _np.linalg.norm(_r)
                             _u = _np.cross(_r, _f)

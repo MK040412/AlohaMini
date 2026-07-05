@@ -98,3 +98,80 @@ class ScriptedPick(Pick):
         print(f"[SCRIPTPICK] obj_b={np.round(obj_b, 3).tolist()} "
               f"grasp={np.round(grasp_p, 3).tolist()} pre={np.round(pre_p, 3).tolist()}",
               flush=True)
+
+
+@register_skill
+class ScriptedPlace(ScriptedPick):
+    """Drop the held object into a container (sort_the_rubbish-style place):
+    plan — still holding — to a hover pose above the container mouth, open,
+    let the object fall in, then judge success by the object resting inside
+    the container bbox. Reuses ScriptedPick's pop/counter machinery."""
+
+    def __init__(self, robot, controller, task, cfg, *args, **kwargs):
+        super().__init__(robot, controller, task, cfg, *args, **kwargs)
+        self.place_obj = task.objects[self.skill_cfg["objects"][1]]
+
+    def simple_generate_manip_cmds(self):
+        from core.utils.usd_geom_utils import compute_bbox
+        from omni.isaac.core.utils.prims import get_prim_at_path
+        from omni.isaac.core.utils.transformations import get_relative_transform
+
+        root = get_prim_at_path(self.task.root_prim_path)
+        T_root_base = get_relative_transform(
+            get_prim_at_path(self.controller.reference_prim_path), root)
+
+        # hover point: container mouth center + pad clearance (root frame,
+        # z up), then mapped into the arm base frame like the pick target
+        bbox = compute_bbox(self.place_obj.prim)
+        pad_above = float(self.skill_cfg.get("pad_above", 0.10))
+        mouth = np.array([(bbox.min[0] + bbox.max[0]) / 2.0,
+                          (bbox.min[1] + bbox.max[1]) / 2.0,
+                          bbox.max[2]])
+        hover_root = mouth + np.array([0.0, 0.0, pad_above])
+        hover_b = (np.linalg.inv(T_root_base) @ np.append(hover_root, 1.0))[:3]
+        q = np.array([1.0, 0.0, 0.0, 0.0])
+
+        cur_p, cur_q = self.controller.get_ee_pose()
+        ignore = deepcopy(self.controller.ignore_substring)
+        ignore.append(self.pick_obj.name)
+
+        manip_list = []
+        manip_list.append((cur_p, cur_q, "update_pose_cost_metric",
+                           {"hold_vec_weight": self.skill_cfg.get("hold_vec_weight", None)}))
+        manip_list.append((cur_p, cur_q, "update_specific",
+                           {"ignore_substring": ignore,
+                            "reference_prim_path": self.controller.reference_prim_path}))
+        # carry move: one plan to the hover pose, gripper stays closed
+        manip_list.append((hover_b, q, "close_gripper", {}))
+        for _ in range(10):
+            manip_list.append((hover_b, q, "close_gripper", {}))
+        for _ in range(int(self.skill_cfg.get("gripper_change_steps", 15))):
+            manip_list.append((hover_b, q, "open_gripper", {}))
+        # fall + settle before the final pop triggers is_success
+        for _ in range(30):
+            manip_list.append((hover_b, q, "open_gripper", {}))
+        self.manip_list = manip_list
+        self.gripper_cmd = "open_gripper"
+        print(f"[SCRIPTPLACE] can_bbox_min={np.round(np.asarray(bbox.min), 3).tolist()} "
+              f"max={np.round(np.asarray(bbox.max), 3).tolist()} "
+              f"hover_root={np.round(hover_root, 3).tolist()} "
+              f"hover_b={np.round(hover_b, 3).tolist()}", flush=True)
+
+    def is_success(self, th=0.0):
+        from core.utils.usd_geom_utils import compute_bbox
+        from omni.isaac.core.utils.prims import get_prim_at_path
+        from omni.isaac.core.utils.transformations import get_relative_transform
+
+        root = get_prim_at_path(self.task.root_prim_path)
+        obj_t = get_relative_transform(self.pick_obj.prim, root)[:3, 3]
+        bbox = compute_bbox(self.place_obj.prim)
+        inside_xy = (bbox.min[0] + 0.005 < obj_t[0] < bbox.max[0] - 0.005) and (
+            bbox.min[1] + 0.005 < obj_t[1] < bbox.max[1] - 0.005)
+        below_rim = obj_t[2] < bbox.max[2] - 0.005
+        above_bottom = obj_t[2] > bbox.min[2] - 0.03
+        ok = bool(inside_xy and below_rim and above_bottom)
+        print(f"[PLACESUCC] obj={np.round(obj_t, 3).tolist()} "
+              f"can=[{np.round(np.asarray(bbox.min), 3).tolist()},"
+              f"{np.round(np.asarray(bbox.max), 3).tolist()}] "
+              f"inside_xy={inside_xy} below_rim={below_rim} -> {ok}", flush=True)
+        return ok
