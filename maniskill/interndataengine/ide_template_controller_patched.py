@@ -464,7 +464,15 @@ class TemplateController(BaseController):
                 else:
                     art_action = ArticulationAction(joint_positions=sim_js.positions[self.arm_indices])
         else:
-            art_action = ArticulationAction(joint_positions=sim_js.positions[self.arm_indices])
+            # same gravity-ratchet hazard as the idle branch: re-targeting the
+            # measured (sagging) positions every tick integrates to a steady
+            # ~30mm/s descent through long lift/body/wrist hold phases —
+            # hold the last plan target instead when one exists
+            hold = getattr(self, "_hold_target", None)
+            if hold is not None:
+                art_action = ArticulationAction(joint_positions=hold, joint_indices=self.idx_list)
+            else:
+                art_action = ArticulationAction(joint_positions=sim_js.positions[self.arm_indices])
         self._step_idx += 1
         if self._step_idx % 25 == 0:
             try:

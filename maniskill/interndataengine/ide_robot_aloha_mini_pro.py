@@ -76,10 +76,10 @@ class AlohaMiniPro(TemplateRobot):
             self._articulation_view.set_max_efforts(np.full(len(arm), 100.0), joint_indices=arm)
             fin = np.array(self.left_gripper_indices + self.right_gripper_indices)
             self._articulation_view.set_gains(
-                kps=np.full(len(fin), 2000.0), kds=np.full(len(fin), 100.0),
+                kps=np.full(len(fin), 5000.0), kds=np.full(len(fin), 150.0),
                 joint_indices=fin,
             )
-            self._articulation_view.set_max_efforts(np.full(len(fin), 80.0), joint_indices=fin)
+            self._articulation_view.set_max_efforts(np.full(len(fin), 150.0), joint_indices=fin)
             lift = np.array(self.lift_indices)
             self._articulation_view.set_gains(
                 kps=np.full(len(lift), 625.0), kds=np.full(len(lift), 62.5),
@@ -91,8 +91,14 @@ class AlohaMiniPro(TemplateRobot):
                 from pxr import PhysxSchema as _Px
                 _root = _gpp(self.robot_prim_path + "/root_joint")
                 if _root and _root.IsValid():
-                    _Px.PhysxArticulationAPI.Apply(_root).GetEnabledSelfCollisionsAttr().Set(True)
-                    print("[SELFCOL] articulation self-collision ENABLED", flush=True)
+                    _api = _Px.PhysxArticulationAPI.Apply(_root)
+                    _api.GetEnabledSelfCollisionsAttr().Set(True)
+                    # contact-rich pinches slid at a constant rate through a
+                    # 137N grip at physics_dt=1/30 — classic solver-iteration
+                    # starvation; measured identical for two different objects
+                    _api.GetSolverPositionIterationCountAttr().Set(64)
+                    _api.GetSolverVelocityIterationCountAttr().Set(8)
+                    print("[SELFCOL] self-collision ENABLED, solver iters 64/8", flush=True)
             except Exception as _exc:
                 print(f"[SELFCOL] {_exc}", flush=True)
         except Exception as exc:

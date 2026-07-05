@@ -1,0 +1,201 @@
+tasks:
+  -
+    name: banana_base_task
+    asset_root: workflows/simbox/assets
+    task: BananaBaseTask
+    task_id: 0
+
+    offset: null
+    render: True
+
+    neglect_collision_names: ["table"]
+
+    arena_file: workflows/simbox/core/configs/arenas/pick_randomized_arena.yaml
+
+    env_map:
+      envmap_lib: envmap_lib
+      apply_randomization: True
+      intensity_range: [4000, 7000]
+      rotation_range: [0, 180]
+
+    robots:
+      -
+        name: "aloha_mini_pro"
+        robot_config_file: workflows/simbox/core/configs/robots/aloha_mini_pro.yaml
+        euler: [0.0, 0.0, 90.0]
+        constrain_grasp_approach: true
+        left_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
+        right_joint_home: [0.0, 0.3, -0.3, 0.0, 0.0, 0.0]
+        left_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        right_joint_home_std: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        ignore_substring: ["material", "table"]
+
+    objects:
+      -
+        name: pick_object_left
+        path: ../example_assets/task/sort_the_rubbish/non_recyclable_garbage/obj_10/Aligned_obj.usd
+        target_class: RigidObject
+        dataset: oo3d
+        category: bottle
+        prim_path_child: Aligned
+        translation: [0.0, 0.0, 0.0]
+        euler: [0.0, 0.0, 0.0]
+        scale: [1, 1, 1]
+        apply_randomization: False
+        orientation_mode: keep
+        optimize_2d_layout: True
+      -
+        name: pick_object_right
+        path: ../example_assets/task/sort_the_rubbish/non_recyclable_garbage/obj_10/Aligned_obj.usd
+        target_class: RigidObject
+        dataset: oo3d
+        category: bottle
+        prim_path_child: Aligned
+        translation: [0.0, 0.0, 0.0]
+        euler: [0.0, 0.0, 0.0]
+        scale: [1, 1, 1]
+        apply_randomization: False
+        orientation_mode: keep
+        optimize_2d_layout: True
+      -
+        name: garbage_can
+        path: ../example_assets/task/sort_the_rubbish/garbage_can/nonrecyclable_can/Aligned_obj.usd
+        target_class: GeometryObject
+        dataset: gso
+        category: box
+        prim_path_child: Aligned
+        translation: [0.0, 0.0, 0.0]
+        euler: [90.0, 0.0, 0.0]
+        # native 0.461 x 0.651(h) x 0.4625 -> mini can: mouth ~11.5cm, height ~10cm
+        scale: [0.25, 0.123, 0.25]
+        apply_randomization: False
+
+    regions:
+      -
+        object: pick_object_right
+        target: table
+        random_type: A_on_B_region_sampler
+        random_config:
+          # mirror of the left band across the chassis center (root x 0.34)
+          pos_range: [
+            [0.51, -0.345, 0.0],
+            [0.54, -0.325, 0.0]
+          ]
+          yaw_rotation: [3.1416, 3.1416]
+      -
+        object: pick_object_left
+        target: table
+        random_type: A_on_B_region_sampler
+        random_config:
+          # south-edge band within the Pro mount's ~0.17m reach
+          # (table footprint y in [-0.425, 0.425]; mount at (0.183, -0.483))
+          pos_range: [
+            [0.14, -0.345, 0.0],
+            [0.17, -0.325, 0.0]
+          ]
+          yaw_rotation: [3.1416, 3.1416]
+      -
+        object: garbage_can
+        target: table
+        random_type: A_on_B_region_sampler
+        random_config:
+          # right of the pick band, still inside the left arm's reach
+          pos_range: [
+            [0.34, -0.245, 0.0],
+            [0.34, -0.245, 0.0]
+          ]
+          yaw_rotation: [0.0, 0.0]
+      -
+        object: aloha_mini_pro
+        target: table
+        random_type: A_on_B_region_sampler
+        random_config:
+          pos_range: [
+            [0.34, -0.49, -0.765],
+            [0.34, -0.49, -0.765]
+          ]
+          yaw_rotation: [1.5708, 1.5708]
+
+    cameras:
+      -
+        name: aloha_mini_pro_hand_left
+        translation: [0.0, 0.08, 0.05]
+        orientation: [0.0, 0.0, 0.965, 0.259]
+        camera_axes: usd
+        camera_file: workflows/simbox/core/configs/cameras/astra.yaml
+        parent: "aloha_mini_pro/left_Fixed_Jaw"
+        apply_randomization: False
+      -
+        name: aloha_mini_pro_hand_right
+        translation: [0.0, 0.08, 0.04]
+        orientation: [0.0, 0.0, 0.972, 0.233]
+        camera_axes: usd
+        camera_file: workflows/simbox/core/configs/cameras/astra.yaml
+        parent: "aloha_mini_pro/right_Fixed_Jaw"
+        apply_randomization: False
+      -
+        name: aloha_mini_pro_head
+        # measured via runtime lookat probe (mast-center eye, workspace target),
+        # read back with get_local_pose(camera_axes="usd")
+        translation: [-0.0018, -0.0649, 1.0861]
+        orientation: [-0.2716, -0.0798, 0.2703, 0.9202]
+        camera_axes: usd
+        camera_file: workflows/simbox/core/configs/cameras/realsense_d455_v3.yaml
+        parent: "aloha_mini_pro/base_link"
+
+    data:
+      task_dir: "aloha_mini_pro_sort_rubbish_dual"
+      language_instruction: "Clear the table: pick each piece of garbage and drop it into the central bin."
+      detailed_language_instruction: "Pick up the garbage on the table with the left AlohaMini Pro arm and drop it into the garbage can on the right."
+      collect_info: ""
+      version: "v1.0, AlohaMini Pro sort_the_rubbish transplant, head camera 1280x720, wrist 640x480"
+      update: True
+      max_episode_length: 3000
+
+    skills:
+      -
+        aloha_mini_pro:
+          -
+            left:
+              -
+                name: scripted_pick
+                objects: [pick_object_left]
+                pre_grasp_offset: 0.05
+                gripper_change_steps: 15
+                t_eps: 0.025
+                o_eps: 1
+                process_valid: True
+                lift_th: 0.02
+                post_grasp_offset_min: 0.10
+                post_grasp_offset_max: 0.15
+              -
+                name: scripted_place
+                objects: [pick_object_left, garbage_can]
+                # rim clearance: pads reach pad_above-0.091 over the rim
+                pad_above: 0.14
+                gripper_change_steps: 15
+                t_eps: 0.025
+                o_eps: 1
+          -
+            right:
+              -
+                name: scripted_pick
+                objects: [pick_object_right]
+                pre_grasp_offset: 0.05
+                gripper_change_steps: 15
+                t_eps: 0.025
+                o_eps: 1
+                process_valid: True
+                lift_th: 0.02
+                post_grasp_offset_min: 0.10
+                post_grasp_offset_max: 0.15
+              -
+                name: scripted_place
+                objects: [pick_object_right, garbage_can]
+                # rim clearance: pads reach pad_above-0.091 over the rim, so
+                # 0.14 leaves ~5cm — below that CuRobo's collision margin on
+                # the can kills the hover IK (observed IK_FAIL x61)
+                pad_above: 0.14
+                gripper_change_steps: 15
+                t_eps: 0.025
+                o_eps: 1
