@@ -146,7 +146,8 @@
     <parent link="base_link" />
     <child link="vertical_link" />
     <axis xyz="0 0 1" />
-    <limit lower="0" upper="0.15" effort="100" velocity="0.5" />
+    <!-- travel from upstream liyiteng/alohamini alohamini2pro.urdf -->
+    <limit lower="-0.3" upper="0.3" effort="100" velocity="0.5" />
   </joint>
 
   <!-- ========== LEFT ARM ========== -->

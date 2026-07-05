@@ -126,10 +126,11 @@ class AlohaMiniBaseAgent(BaseAgent):
             normalize_action=False,
         )
 
-    # Physical travel of the vertical_move (lift) joint, from the URDF limit
-    # (matches the AlohaMini 0-60 cm lift spec, with a small negative reach).
-    LIFT_LOWER = -0.15
-    LIFT_UPPER = 0.6
+    # Physical travel of the vertical_move (lift) joint, from the upstream
+    # liyiteng/alohamini alohamini2pro.urdf: [-0.3, +0.3] (0.6 m total travel,
+    # 0.3 m below the home carriage position — enables near-floor reach).
+    LIFT_LOWER = -0.3
+    LIFT_UPPER = 0.3
 
     def _create_lift_pos_controller(self):
         """Create position controller for the lift mechanism.
