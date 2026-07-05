@@ -54,8 +54,8 @@ tasks:
           # south-edge band within the Pro mount's ~0.17m reach
           # (table footprint y in [-0.425, 0.425]; mount at (-0.187, -0.473))
           pos_range: [
-            [0.00, -0.36, 0.0],
-            [0.12, -0.30, 0.0]
+            [0.13, -0.36, 0.0],
+            [0.25, -0.30, 0.0]
           ]
           yaw_rotation: [3.1416, 3.1416]
       -
@@ -64,12 +64,12 @@ tasks:
         random_type: A_on_B_region_sampler
         random_config:
           pos_range: [
-            [-0.10, -0.43, -0.765],
-            [-0.10, -0.43, -0.765]
+            [0.03, -0.43, -0.765],
+            [0.03, -0.43, -0.765]
           ]
-          # donor arm-base mount is rolled/flipped vs Std: at the Std yaw the Pro
-          # arms face AWAY from the table (home EE world-south, object north)
-          yaw_rotation: [3.1416, 3.1416]
+          # arms are SIDE-mounted: yaw -90deg turns the trunk to face the table
+          # with the left mount overhanging the south edge (maniskill layout)
+          yaw_rotation: [-1.5708, -1.5708]
 
     cameras:
       -

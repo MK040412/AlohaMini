@@ -94,6 +94,7 @@ class ScriptedPick(Pick):
             manip_list.append((lift_p, q, "close_gripper", {}))
         self.manip_list = manip_list
         self.gripper_cmd = "close_gripper"
+        print(f"[SPBASE] mount_root_rel_t={np.round(T_root_base[:3,3],3).tolist()}", flush=True)
         print(f"[SCRIPTPICK] obj_b={np.round(obj_b, 3).tolist()} "
               f"grasp={np.round(grasp_p, 3).tolist()} pre={np.round(pre_p, 3).tolist()}",
               flush=True)

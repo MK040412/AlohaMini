@@ -36,7 +36,9 @@ class AlohaMiniProController(TemplateController):
         self._gripper_joint_position = np.array([1.0] * len(self.gripper_indices))
 
     def get_gripper_action(self):
-        return np.clip(self._gripper_state * self._gripper_joint_position, 0.0, 0.037)
+        # keep 2mm at full close: the pads meet exactly at q=0 and with
+        # articulation self-collision enabled a 0-target makes them fight
+        return np.clip(self._gripper_state * self._gripper_joint_position, 0.002, 0.037)
 
     def lift_ctrl(self, target: float = 0.13):
         """Command the dedicated vertical_move joint (dof 3) directly; the arm

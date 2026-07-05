@@ -83,5 +83,14 @@ class AlohaMiniPro(TemplateRobot):
                 joint_indices=lift,
             )
             print("[GAINS] Pro drives re-gained (arm kd=3581, finger/lift kd=62.5)", flush=True)
+            try:
+                from omni.isaac.core.utils.prims import get_prim_at_path as _gpp
+                from pxr import PhysxSchema as _Px
+                _root = _gpp(self.robot_prim_path + "/root_joint")
+                if _root and _root.IsValid():
+                    _Px.PhysxArticulationAPI.Apply(_root).GetEnabledSelfCollisionsAttr().Set(True)
+                    print("[SELFCOL] articulation self-collision ENABLED", flush=True)
+            except Exception as _exc:
+                print(f"[SELFCOL] {_exc}", flush=True)
         except Exception as exc:
             print(f"[GAINS] failed: {exc}", flush=True)
