@@ -21,6 +21,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from robots import ROBOTS, register_agents
+
 DATA_DIR = Path.home() / ".maniskill" / "data"
 
 # scene key -> (env_id, allowed robots, default robot, required asset)
@@ -30,7 +32,6 @@ SCENES = {
     "ycb": ("AlohaMiniMultiYCB-v1", ("mini1",), "mini1", "ycb"),
     "replicacad": ("ReplicaCAD_SceneManipulation-v1", ("mini1", "mini2"), "mini1", "replicacad"),
 }
-ROBOT_UIDS = {"mini1": "aloha_mini_1", "mini2": "aloha_mini_2"}
 ASSETS = {
     "ycb": (DATA_DIR / "assets" / "mani_skill2_ycb",
             "python -m mani_skill.utils.download_asset ycb"),
@@ -43,7 +44,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("scene", choices=SCENES)
-    ap.add_argument("--robot", choices=ROBOT_UIDS, default=None)
+    ap.add_argument("--robot", choices=ROBOTS, default=None)
     ap.add_argument("--render", action="store_true")
     ap.add_argument("--steps", type=int, default=100)
     ap.add_argument("--shader", choices=("default", "rt-fast", "rt"), default="default")
@@ -62,10 +63,7 @@ def main() -> int:
             return 1
 
     import gymnasium as gym
-    try:
-        import mani_skill.agents.robots.aloha_mini  # noqa: installed via install.py
-    except ImportError:
-        import agents.aloha_mini  # noqa: fallback — repo checkout without install.py
+    register_agents()
     import mani_skill.envs  # noqa
     if args.scene in ("table", "ycb"):
         import data_gen.tasks  # noqa: registers the AlohaMini* task envs
@@ -73,12 +71,12 @@ def main() -> int:
     kwargs = dict(obs_mode="state", reward_mode="none", sim_backend="physx_cpu")
     if len(allowed) > 1:
         # the repo task envs pin their own robot; only pass a choice where one exists
-        kwargs["robot_uids"] = ROBOT_UIDS[robot]
+        kwargs["robot_uids"] = ROBOTS[robot]
     if args.render:
         kwargs["render_mode"] = "human"
         kwargs["human_render_camera_configs"] = dict(shader_pack=args.shader)
 
-    print(f"[DEMO] {args.scene}: gym.make({env_id!r}, robot={ROBOT_UIDS[robot]})", flush=True)
+    print(f"[DEMO] {args.scene}: gym.make({env_id!r}, robot={ROBOTS[robot]})", flush=True)
     env = gym.make(env_id, **kwargs)
     reset_options = dict(reconfigure=True) if args.scene == "replicacad" else None
     env.reset(seed=0, options=reset_options)

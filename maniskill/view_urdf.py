@@ -2,8 +2,8 @@
 """GUI viewer for the two official AlohaMini robots.
 
 Usage:
-    python view_urdf.py                 # list keys
-    python view_urdf.py mini2           # open that robot in the SAPIEN viewer
+    python view_urdf.py                   # list keys
+    python view_urdf.py mini2             # open that robot in the SAPIEN viewer
     python view_urdf.py mini1 --headless  # load-check only (no window, exits 0)
 
 Keys:
@@ -12,23 +12,17 @@ Keys:
 """
 import sys
 
-KEYS = {
-    "mini1": "aloha_mini_1",
-    "mini2": "aloha_mini_2",
-}
+from robots import ROBOTS, register_agents
 
-if len(sys.argv) < 2 or sys.argv[1] not in KEYS:
+if len(sys.argv) < 2 or sys.argv[1] not in ROBOTS:
     print(__doc__)
     sys.exit(0 if len(sys.argv) < 2 else 1)
 
-uid = KEYS[sys.argv[1]]
+uid = ROBOTS[sys.argv[1]]
 headless = "--headless" in sys.argv  # load-check only, no window
 
 import gymnasium as gym
-try:
-    import mani_skill.agents.robots.aloha_mini  # noqa: installed via install.py
-except ImportError:
-    import agents.aloha_mini  # noqa: fallback — running from the repo without install.py
+register_agents()
 import mani_skill.envs  # noqa
 
 env = gym.make(
