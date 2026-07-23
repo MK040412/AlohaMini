@@ -70,6 +70,15 @@ def disable_link_collisions(link):
 
 CFG_YML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "curobo_am2pro_left.yml")
 
+
+def robot_cfg_dict():
+    """CuRobo robot_cfg from the yml, with ~ in urdf_path expanded (portable)."""
+    from curobo.util_file import load_yaml
+    cfg = load_yaml(CFG_YML)["robot_cfg"]
+    kin = cfg["kinematics"]
+    kin["urdf_path"] = os.path.expanduser(kin["urdf_path"])
+    return cfg
+
 # TCP (Fixed_Jaw) -> grasp point offset, Isaac/sim-validated: grasp center sits
 # at local +Z 0.1056, jaws separate along local +X (see curobo_am2pro_left.yml).
 TIP_Z = 0.1056
@@ -209,7 +218,7 @@ def main():
     ])
 
     # ---- MotionGen (lean: small seed counts, no cuda graph) ----
-    robot_cfg = RobotConfig.from_dict(load_yaml(CFG_YML)["robot_cfg"], tda)
+    robot_cfg = RobotConfig.from_dict(robot_cfg_dict(), tda)
     t0 = time.time()
     mg = MotionGen(MotionGenConfig.load_from_robot_config(
         robot_cfg, world, tensor_args=tda,

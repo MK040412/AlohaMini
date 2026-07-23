@@ -15,7 +15,7 @@
 # aloha_mini_pro_wholebody_left.yml, remapped to the aloha_mini2_pro link names.
 robot_cfg:
   kinematics:
-    urdf_path: "/home/perelman/.maniskill/data/robots/aloha_mini/aloha_mini2_pro/alohamini2pro_parallel.urdf"
+    urdf_path: "~/.maniskill/data/robots/aloha_mini_2/aloha_mini_2.urdf"
     asset_root_path: ""
     isaac_usd_path: ""
     usd_path: ""

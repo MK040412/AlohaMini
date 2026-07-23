@@ -52,7 +52,7 @@ def main(n_batches=7, N=16, ep_base=500000, colors=("red", "green", "blue"), cub
     colors = list(colors); K = len(colors)
     rng = np.random.default_rng(2026 + ep_base)
     tda = TensorDeviceType()
-    robot_cfg = RobotConfig.from_dict(load_yaml(CFG_YML)["robot_cfg"], tda)
+    robot_cfg = RobotConfig.from_dict(cpp.robot_cfg_dict(), tda)
     # floor far below only (same as vec_pick_gen): a top-down grasp never hits the table,
     # and a mis-placed table cuboid rejects EVERY plan as in-collision.
     world0 = WorldConfig(cuboid=[Cuboid(name="floor", pose=[0, 0, -1.2, 1, 0, 0, 0], dims=[4.0, 4.0, 0.1])])

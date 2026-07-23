@@ -39,7 +39,7 @@ dev = "cuda"
 def main(n_batches=40, N=64, ep_base=20000, color="red"):
     os.makedirs(OUT_DIR, exist_ok=True)
     tda = TensorDeviceType()
-    robot_cfg = RobotConfig.from_dict(load_yaml(CFG_YML)["robot_cfg"], tda)
+    robot_cfg = RobotConfig.from_dict(cpp.robot_cfg_dict(), tda)
     world0 = WorldConfig(cuboid=[Cuboid(name="floor", pose=[0, 0, -1.2, 1, 0, 0, 0], dims=[4.0, 4.0, 0.1])])
     t0 = time.time()
     mg = MotionGen(MotionGenConfig.load_from_robot_config(

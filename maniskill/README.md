@@ -73,16 +73,24 @@ Expected output of the last two:
 
 ---
 
-## 2. Look at the robots (GUI viewer)
+## 2. Check the robots (GUI)
 
-On a machine with a display:
+This is the normal way to verify the robots after setup — look at them, put them in a scene, drive one yourself. On a machine with a display:
 
 ```bash
-python view_urdf.py mini1    # AlohaMini 1 in the SAPIEN viewer
-python view_urdf.py mini2    # AlohaMini 2 (black motors)
+# look at the model
+python view_urdf.py mini1        # AlohaMini 1 in the SAPIEN viewer
+python view_urdf.py mini2        # AlohaMini 2 (black motors)
+
+# see it in a task scene
+python demo.py table --render    # AlohaMini 1 at the cube-pick table
+python demo.py empty --render    # AlohaMini 2 alone
+
+# drive it yourself (keyboard IK — full key map in Section 6)
+cd teleop && python demo_teleop.py --render
 ```
 
-Close the window to exit. `python view_urdf.py` with no argument lists the keys.
+Close the window to exit. `python view_urdf.py` / `python demo.py --help` list all options.
 
 ---
 
@@ -140,7 +148,7 @@ obs, reward, terminated, truncated, info = env.step(env.action_space.sample() * 
 
 Notes:
 
-- `AlohaMiniMultiYCB-v1` needs the YCB object set once: `python -m mani_skill.utils.download_asset ycb`
+- `AlohaMiniMultiYCB-v1` needs the YCB object set once — see Section 7
 - The `AM2*` environments also run batched on GPU: `gym.make(..., num_envs=16, sim_backend="physx_cuda")`
 - These environments provide observations/success flags for scripted data generation, not shaped rewards — hence `reward_mode="none"`.
 
@@ -208,32 +216,55 @@ VR teleop with camera streaming: `python demo_vr_teleop_stream.py`, then open `h
 
 ---
 
-## 7. ReplicaCAD apartment scene (optional)
+## 7. Demo runner + optional asset packs
 
-Drive AlohaMini around a full apartment. One-time asset download, then:
+`demo.py` runs every scene with one command — GUI with `--render`, headless smoke without it:
 
 ```bash
+python demo.py empty --render                 # robot in an empty scene
+python demo.py table --render                 # tabletop cube pick
+python demo.py table                          # same scene, headless (steps 100x, prints OK)
+```
+
+Two scenes need a one-time optional asset download. Download the pack, then run the scene with the matching option — if the pack is missing, `demo.py` prints the exact download command instead of crashing:
+
+```bash
+# YCB object set (~1 GB) -> multi-object table
+python -m mani_skill.utils.download_asset ycb
+python demo.py ycb --render
+
+# ReplicaCAD apartment (~2 GB) -> whole-apartment scene
 python -m mani_skill.utils.download_asset ReplicaCAD
+python demo.py replicacad --render --shader rt-fast
 ```
 
-```python
-import gymnasium as gym
-import mani_skill.envs
-import mani_skill.agents.robots.aloha_mini
+| Option | Values | Meaning |
+|--------|--------|---------|
+| `--robot` | `mini1` / `mini2` | robot choice, where the scene allows it (`empty`, `replicacad`) |
+| `--render` | flag | open the SAPIEN viewer (default: headless) |
+| `--steps` | int | headless step count (default 100) |
+| `--shader` | `default` / `rt-fast` / `rt` | render quality, fast → best |
 
-env = gym.make(
-    "ReplicaCAD_SceneManipulation-v1",
-    robot_uids="aloha_mini_1",
-    render_mode="human",
-    control_mode="pd_joint_pos",
-)
-obs, info = env.reset(options=dict(reconfigure=True))
-while True:
-    obs, *_ = env.step(env.action_space.sample() * 0.1)
-    env.render()
+---
+
+## 8. Data generation (GPU-parallel)
+
+Episode generation always runs **batched on the GPU** (`physx_cuda`, N environments in lock-step + CuRobo batched motion planning) — never per-episode CPU loops. Requires a CUDA GPU and [CuRobo](https://curobo.org) in the venv; `--envs 16` is the ceiling on an 8 GB GPU.
+
+```bash
+# 3 batches x 16 parallel envs of "pick up the {color} cube" (per-env random target);
+# only successful grasp+lift episodes are saved as .npz
+python -m vec_datagen.gen --colors red,green,blue --batches 3
+
+# with trajectory diversity + DART recovery + proprio randomization
+python -m vec_datagen.gen --colors red,yellow,blue --batches 3 \
+    --station-noise 0.02 --yaw-rand --grasp-dart 2 --arm-init-noise 0.05
+
+# or drive it from a JSON task spec (keys = flag names)
+python -m vec_datagen.gen --spec my_tasks.json
 ```
 
-Shader quality: `sensor_configs=dict(shader_pack=...)` with `default` (fast) / `rt-fast` / `rt` (best).
+**LLM-driven generation**: the repo ships a Claude Code skill at `.claude/skills/alohamini-datagen/` — open the repo in Claude Code and just ask, e.g. *"generate 100 episodes of red/blue cube picking with yaw diversity"*; the skill maps the request onto the flags above.
 
 ---
 
@@ -255,6 +286,7 @@ Shader quality: `sensor_configs=dict(shader_pack=...)` with `default` (fast) / `
 maniskill/
 ├── install.py                # installer: agents + assets + registration (--check / --uninstall)
 ├── view_urdf.py              # GUI / headless robot viewer
+├── demo.py                   # scene runner: empty | table | ycb | replicacad (--render / --robot)
 ├── agents/aloha_mini/        # AlohaMini1, AlohaMini2 agent classes (+ _validate_aloha_mini_2.py)
 ├── assets/robots/aloha_mini/ # AlohaMini 1 URDF + meshes (AlohaMini 2 comes from Releases)
 ├── data_gen/tasks.py         # AlohaMini* task environments (the rest of data_gen/ is research pipelines)
