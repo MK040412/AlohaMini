@@ -1,0 +1,144 @@
+# CuRobo robot config for the AlohaMini 2 Pro LEFT arm (6-DOF), fixed-base station.
+#
+# Chain: base_link = "left_Base"  ->  ee_link = "left_Fixed_Jaw".
+# Only the 6 revolute arm joints are actuated; the mobile base (root_x/y/z),
+# lift (vertical_move) and the whole right arm live ABOVE left_Base in the URDF
+# tree, so with base_link="left_Base" curobo never sees them (lean on 8 GB GPU,
+# and avoids the 290k-pt base/vertical mega-hulls that plague the whole-body cfg).
+# The caller drives the base to a station (solve_wb) and holds it, then curobo
+# plans the arm in the left_Base frame.
+#
+# collision_spheres: HAND-AUTHORED from the new URDF collision-mesh bounding
+# boxes (curobo auto-fit was unstable here -- VOXEL_VOLUME_SAMPLE_SURFACE
+# collapsed every radius to the 0.004 surface floor, and robo9_wrist_frame.stl
+# (Fixed_Jaw collision) is millimetre-scaled). Structure mirrors
+# aloha_mini_pro_wholebody_left.yml, remapped to the aloha_mini2_pro link names.
+robot_cfg:
+  kinematics:
+    urdf_path: "/home/perelman/.maniskill/data/robots/aloha_mini/aloha_mini2_pro/alohamini2pro_parallel.urdf"
+    asset_root_path: ""
+    isaac_usd_path: ""
+    usd_path: ""
+    usd_robot_root: ""
+    usd_flip_joints: {}
+    usd_flip_joint_limits: []
+
+    base_link: "left_Base"
+    ee_link: "left_Fixed_Jaw"
+
+    extra_links:
+      attached_object:
+        parent_link_name: "left_Fixed_Jaw"
+        link_name: "attached_object"
+        fixed_transform: [0.0, 0.0, 0.1056, 1.0, 0.0, 0.0, 0.0]  # at the grasp point (local +Z)
+        joint_type: "FIXED"
+        joint_name: "attach_joint"
+
+    collision_link_names:
+      [
+        "left_Base",
+        "left_Rotation_Pitch",
+        "left_Upper_Arm",
+        "left_Lower_Arm",
+        "left_Wrist_Pitch_Roll",
+        "left_wrist_yaw",
+        "left_Fixed_Jaw",
+        "attached_object",
+      ]
+    collision_spheres:
+      left_Base:
+        - center: [-0.04, 0.01, 0.035]
+          radius: 0.038
+        - center: [0.0, 0.01, 0.04]
+          radius: 0.04
+        - center: [0.04, 0.01, 0.035]
+          radius: 0.038
+      left_Rotation_Pitch:
+        - center: [0.0, -0.02, 0.02]
+          radius: 0.035
+        - center: [0.0, 0.0, 0.05]
+          radius: 0.032
+        - center: [0.0, -0.04, 0.0]
+          radius: 0.03
+      left_Upper_Arm:
+        - center: [-0.02, 0.02, 0.0]
+          radius: 0.035
+        - center: [-0.02, 0.06, 0.0]
+          radius: 0.033
+        - center: [-0.02, 0.10, 0.0]
+          radius: 0.032
+        - center: [-0.02, 0.14, 0.0]
+          radius: 0.03
+      left_Lower_Arm:
+        - center: [0.0, -0.02, 0.0]
+          radius: 0.033
+        - center: [0.0, -0.08, 0.0]
+          radius: 0.031
+        - center: [0.0, -0.14, 0.0]
+          radius: 0.03
+        - center: [0.0, -0.19, 0.0]
+          radius: 0.028
+      left_Wrist_Pitch_Roll:
+        - center: [0.0, -0.01, 0.0]
+          radius: 0.028
+        - center: [0.0, -0.035, 0.0]
+          radius: 0.025
+      left_wrist_yaw:
+        - center: [0.0, 0.02, 0.02]
+          radius: 0.03
+        - center: [0.0, 0.045, 0.04]
+          radius: 0.027
+      left_Fixed_Jaw:
+        - center: [0.0, 0.0, 0.02]
+          radius: 0.03
+        - center: [0.0, 0.0, 0.05]
+          radius: 0.026
+        - center: [0.0, 0.0, 0.08]
+          radius: 0.022
+    collision_sphere_buffer: 0.004
+    extra_collision_spheres: {"attached_object": 4}
+    self_collision_ignore:
+      {
+        "left_Base": ["left_Rotation_Pitch", "left_Upper_Arm", "left_Lower_Arm", "left_Wrist_Pitch_Roll", "left_wrist_yaw", "left_Fixed_Jaw", "attached_object"],
+        "left_Rotation_Pitch": ["left_Upper_Arm", "left_Lower_Arm", "left_Wrist_Pitch_Roll", "left_wrist_yaw", "left_Fixed_Jaw", "attached_object"],
+        "left_Upper_Arm": ["left_Lower_Arm", "left_Wrist_Pitch_Roll", "left_wrist_yaw", "left_Fixed_Jaw", "attached_object"],
+        "left_Lower_Arm": ["left_Wrist_Pitch_Roll", "left_wrist_yaw", "left_Fixed_Jaw", "attached_object"],
+        "left_Wrist_Pitch_Roll": ["left_wrist_yaw", "left_Fixed_Jaw", "attached_object"],
+        "left_wrist_yaw": ["left_Fixed_Jaw", "attached_object"],
+        "left_Fixed_Jaw": ["attached_object"],
+      }
+    self_collision_buffer:
+      {
+        "left_Base": 0.02,
+        "left_Rotation_Pitch": 0.02,
+        "left_Upper_Arm": 0.02,
+        "left_Lower_Arm": 0.02,
+        "left_Wrist_Pitch_Roll": 0.015,
+        "left_wrist_yaw": 0.015,
+        "left_Fixed_Jaw": 0.01,
+        "attached_object": 0.0,
+      }
+    use_global_cumul: True
+    mesh_link_names:
+      [
+        "left_Base",
+        "left_Rotation_Pitch",
+        "left_Upper_Arm",
+        "left_Lower_Arm",
+        "left_Wrist_Pitch_Roll",
+        "left_wrist_yaw",
+        "left_Fixed_Jaw",
+      ]
+    external_asset_path: null
+    # The parallel-gripper clamps are children of the ee_link (left_Fixed_Jaw), so
+    # curobo's base->ee chain parse never reaches them: no lock needed, the only
+    # actuated DOF are the 6 arm joints below.
+    lock_joints: {}
+
+    cspace:
+      joint_names: ["left_shoulder_pan", "left_shoulder_lift", "left_elbow_flex", "left_wrist_flex", "left_wrist_yaw_joint", "left_wrist_roll"]
+      retract_config: [0.0, -1.5, 2.5, 0.0, 0.0, 0.0]
+      null_space_weight: [1, 1, 1, 1, 1, 1]
+      cspace_distance_weight: [1, 1, 1, 1, 1, 1]
+      max_acceleration: 15.0
+      max_jerk: 500.0

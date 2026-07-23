@@ -104,14 +104,23 @@ def install() -> None:
 
 def check() -> bool:
     """Verify the install; say exactly what is missing and how to fix it."""
+    import subprocess
+
     ok = True
     print("\n[check] importing registered agents...")
-    try:
-        from mani_skill.agents.robots import AlohaMini1, AlohaMini2  # noqa: F401
+    # subprocess, not in-process: install() may have just rewritten
+    # robots/__init__.py, and this process would re-use the stale cached module
+    r = subprocess.run(
+        [sys.executable, "-c",
+         "from mani_skill.agents.robots import AlohaMini1, AlohaMini2"],
+        capture_output=True, text=True,
+    )
+    if r.returncode == 0:
         print("  OK  aloha_mini_1 + aloha_mini_2 agents import")
-    except Exception as exc:
+    else:
         ok = False
-        print(f"  FAIL agents do not import ({exc!r}) — re-run: python install.py")
+        err = (r.stderr.strip().splitlines() or ["unknown error"])[-1]
+        print(f"  FAIL agents do not import ({err}) — re-run: python install.py")
 
     am1 = data_dir() / "robots" / "aloha_mini" / "aloha_mini_1.urdf"
     print(f"[check] AlohaMini 1 assets: {am1}")
@@ -149,11 +158,14 @@ def uninstall() -> None:
         robots_init.write_text("\n".join(lines) + "\n")
         print(f"Deregistered agents in {robots_init}")
 
-    for name in ("aloha_mini", "aloha_mini_2"):
-        asset_dst = data_dir() / "robots" / name
-        if asset_dst.exists():
-            shutil.rmtree(asset_dst)
-            print(f"Removed {asset_dst}")
+    # only remove what install() added; aloha_mini_2 assets are a user download
+    asset_dst = data_dir() / "robots" / "aloha_mini"
+    if asset_dst.exists():
+        shutil.rmtree(asset_dst)
+        print(f"Removed {asset_dst}")
+    am2 = data_dir() / "robots" / "aloha_mini_2"
+    if am2.exists():
+        print(f"Kept {am2} (downloaded separately — delete manually if unwanted)")
 
     sb_dst = maniskill_path / "utils" / "scene_builder" / "replicacad" / "scene_builder.py"
     backup = sb_dst.with_suffix(".py.bak")

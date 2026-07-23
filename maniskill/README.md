@@ -14,7 +14,7 @@ Both are mobile: virtual planar base (x, y, rotation) + a vertical lift, with tw
 
 ## 1. Setup
 
-Requirements: Linux, Python 3.10–3.11. A GPU is optional (physics runs on CPU); the GUI viewer needs a display + Vulkan.
+Requirements: Linux, Python 3.10–3.11, `wget` + `unzip`. A GPU is optional (physics runs on CPU); the GUI viewer needs a display + Vulkan.
 
 ```bash
 git clone https://github.com/MK040412/AlohaMini.git
@@ -63,7 +63,13 @@ Expected output of the last two:
 [VIEW] aloha_mini_2: URDF loaded OK (...)
 ```
 
-`install.py` is idempotent — re-run it any time (e.g. after `pip install -U mani-skill`). `python install.py --uninstall` removes everything it added.
+> **If this crashes with `RuntimeError: The NVIDIA driver on your system is too old`**: pip resolved a torch built for a newer CUDA than your driver. Reinstall torch for your driver's CUDA and re-run — e.g. for a CUDA 12.8 driver:
+> ```bash
+> uv pip install --reinstall torch --index-url https://download.pytorch.org/whl/cu128
+> ```
+> (check yours with `nvidia-smi`, top-right "CUDA Version")
+
+`install.py` is idempotent — re-run it any time (e.g. after `pip install -U mani-skill`). `python install.py --uninstall` removes everything it added (the separately-downloaded AlohaMini 2 assets are kept).
 
 ---
 
@@ -82,7 +88,7 @@ Close the window to exit. `python view_urdf.py` with no argument lists the keys.
 
 ## 3. Python API
 
-Minimal example — spawn AlohaMini 2 in an empty scene and step it (works headless, no extra assets):
+Minimal example — spawn AlohaMini 2 in an empty scene and step it (works headless, no extra assets). Save it as e.g. `demo.py` and run `python demo.py` — any directory works:
 
 ```python
 import gymnasium as gym
@@ -239,6 +245,7 @@ Shader quality: `sensor_configs=dict(shader_pack=...)` with `default` (fast) / `
 | `AlohaMini 2 assets: MISSING` | you skipped the release zip — run the `wget` + `unzip` from step 1 |
 | `ImportError` on `mani_skill.agents.robots.aloha_mini` | re-run `python install.py` (also needed after reinstalling mani-skill) |
 | GUI viewer fails / black screen | you need a display + Vulkan; use `--headless` to verify on a server, or `shader_pack="default"` and call `env.render()` every step |
+| `RuntimeError: The NVIDIA driver on your system is too old` | torch was built for a newer CUDA than your driver — see the reinstall note in [Setup § Verify](#verify) |
 | `NotImplementedError` in `get_reward` | pass `reward_mode="none"` (the task envs define success, not dense rewards) |
 | keyboard teleop ignores keys | click the pygame window to focus it |
 
@@ -250,8 +257,8 @@ maniskill/
 ├── view_urdf.py              # GUI / headless robot viewer
 ├── agents/aloha_mini/        # AlohaMini1, AlohaMini2 agent classes (+ _validate_aloha_mini_2.py)
 ├── assets/robots/aloha_mini/ # AlohaMini 1 URDF + meshes (AlohaMini 2 comes from Releases)
-├── data_gen/tasks.py         # AlohaMini* task environments
-├── vec_datagen/vec_env.py    # AM2* GPU-batchable environments
+├── data_gen/tasks.py         # AlohaMini* task environments (the rest of data_gen/ is research pipelines)
+├── vec_datagen/vec_env.py    # AM2* GPU-batchable environments (+ CuRobo-based data-gen scripts)
 ├── teleop/                   # keyboard / VR teleoperation
 └── scene_builder/            # ReplicaCAD scene-builder patch
 ```

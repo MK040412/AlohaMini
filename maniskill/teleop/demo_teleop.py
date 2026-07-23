@@ -41,8 +41,6 @@ try:
     import gymnasium as gym
     import mani_skill.envs
     import sapien
-    # Import agents to ensure they are registered
-    from mani_skill.agents.robots import aloha_mini
 except ImportError:
     print("Error: ManiSkill3 not installed. Install with: pip install mani-skill")
     sys.exit(1)

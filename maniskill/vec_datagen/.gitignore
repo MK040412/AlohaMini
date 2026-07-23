@@ -1,0 +1,9 @@
+# research working dir: only the core library files are tracked
+*
+!.gitignore
+!vec_env.py
+!batched_ik.py
+!curobo_pickplace.py
+!curobo_am2pro_left.yml
+!vec_pick_gen.py
+!vec_pick_gen_mo.py
