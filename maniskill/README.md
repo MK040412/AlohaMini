@@ -114,7 +114,7 @@ Add `render_mode="human"` and call `env.render()` each step to watch it live.
 
 ## 4. Task environments
 
-The repo ships ready-made tabletop environments. They are registered by importing their module, and they run **from the `maniskill/` directory**:
+The repo ships ready-made tabletop environments. They are registered by importing their module. Save the snippet **as a file inside `maniskill/`** (the imports resolve relative to the script's location) and run it from there:
 
 ```python
 import gymnasium as gym
