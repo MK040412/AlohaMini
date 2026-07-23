@@ -266,6 +266,8 @@ python -m vec_datagen.gen --spec my_tasks.json
 
 **LLM-driven generation**: the repo ships a Claude Code skill at `.claude/skills/alohamini-datagen/` — open the repo in Claude Code and just ask, e.g. *"generate 100 episodes of red/blue cube picking with yaw diversity"*; the skill maps the request onto the flags above.
 
+Full documentation — episode anatomy, `.npz` schema, diversity knobs, GPU limits: **[vec_datagen/README.md](vec_datagen/README.md)**
+
 ---
 
 ## Troubleshooting
