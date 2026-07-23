@@ -3,8 +3,8 @@ Simple, GPU-parallel tabletop tasks for the AlohaMini parallel-gripper robot.
 
 These subclass ManiSkill's stock tabletop tasks (which already provide cube
 spawning, goal sites, success/grasp checks) and just bind them to the
-`aloha_mini_so100_v2` robot. They rely on the agent interface implemented in
-maniskill/agents/aloha_mini/aloha_mini_so100_v2.py:
+`aloha_mini_1` robot. They rely on the agent interface implemented in
+maniskill/agents/aloha_mini/aloha_mini_1.py:
     - agent.tcp_pose          (left-arm TCP, midpoint of the two finger tips)
     - agent.is_grasping(obj)  (two-finger contact check)
     - agent.is_static()       (excludes the base joints)
@@ -32,7 +32,7 @@ from mani_skill.utils.io_utils import load_json
 from mani_skill.utils.registration import register_env
 from mani_skill.utils.structs.pose import Pose
 
-ROBOT = "aloha_mini_so100_v2"
+ROBOT = "aloha_mini_1"
 
 # Geometry tuned to the AlohaMini left-arm workspace (gripper reaches z in ~[0.52, 1.28]
 # with the base at x=-0.35); see maniskill/tools/ probes. The cube sits on a raised
@@ -320,7 +320,7 @@ class AlohaMiniMultiYCBEnv(BaseEnv):
     the existing PickSkill can resolve it dynamically from config.
     """
 
-    SUPPORTED_ROBOTS = [ROBOT, "aloha_mini_pro_v2", "aloha_mini_pro_v3"]
+    SUPPORTED_ROBOTS = [ROBOT]
 
     def __init__(
         self,

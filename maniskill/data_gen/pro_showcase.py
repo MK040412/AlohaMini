@@ -96,7 +96,7 @@ def build_acts(env, pitch_deg):
 def make_env(render_hq, view):
     kw = dict(num_envs=1, obs_mode="state", control_mode="pd_joint_pos_fixed_base",
               render_mode="rgb_array", reward_mode="none", sim_backend="physx_cpu",
-              object_ids=[OBJ], robot_uid="aloha_mini_pro_v2", base_xy=BASE)
+              object_ids=[OBJ], robot_uid="aloha_mini_2", base_xy=BASE)
     if render_hq:
         eye, target = VIEWS[view]
         kw.update(render_eye=eye, render_target=target,

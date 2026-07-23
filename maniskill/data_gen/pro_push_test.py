@@ -87,7 +87,7 @@ def main() -> None:
         sim_backend="physx_cpu",
         render_backend="none",
         object_ids=[OBJ],
-        robot_uid="aloha_mini_pro_v2",
+        robot_uid="aloha_mini_2",
         base_xy=(-0.40, 0.18),
         slot_override_xy=[tuple(PICK_XY)],
     )

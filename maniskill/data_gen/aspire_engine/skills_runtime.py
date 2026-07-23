@@ -188,13 +188,13 @@ class SkillRuntime:
 
     def arm_base_xy(self) -> np.ndarray:
         for link in self.be.agent.robot.get_links():
-            if link.name == "left_base":
+            if link.name in ("left_base", "left_Base"):
                 return _vec3(link.pose.p)[:2].astype(np.float64)
         raise RuntimeError("left_base link not found")
 
     def left_base_world(self) -> np.ndarray:
         for link in self.be.agent.robot.get_links():
-            if link.name == "left_base":
+            if link.name in ("left_base", "left_Base"):
                 return _vec3(link.pose.p).astype(np.float64)
         raise RuntimeError("left_base link not found")
 

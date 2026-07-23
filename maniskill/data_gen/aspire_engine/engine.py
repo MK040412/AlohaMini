@@ -54,7 +54,10 @@ def _default_cfg(out_dir: str | Path | None = None) -> dict[str, Any]:
         "out_dir": str(out_dir) if out_dir is not None else None,
         "overwrite": True,
         "dataset_name": "aloha_mini_pro_aspire_state",
-        "robot_type": "aloha_mini_pro_v2",
+        # TODO(aloha_mini_2): scripted choreography (station offsets, 6-step base
+        # settle) was tuned on the removed aloha_mini_pro_v2 prototype; smoke is
+        # 0/4 at preselect_pick on this robot until the skills are retuned.
+        "robot_type": "aloha_mini_2",
         "seed_base": 0,
     }
 
@@ -140,7 +143,7 @@ def _make_env(command: dict[str, Any], seed: int, cfg: Any):
         "render_mode": render_mode,
         "reward_mode": "none",
         "sim_backend": "physx_cpu",
-        "robot_uid": "aloha_mini_pro_v2",
+        "robot_uid": "aloha_mini_2",
         "base_xy": tuple(_cfg_get(cfg, "base_xy", (-0.40, 0.18))),
         "object_ids": object_ids,
         "slot_override_xy": [tuple(float(v) for v in pick_xy)],

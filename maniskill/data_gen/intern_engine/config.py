@@ -104,7 +104,7 @@ class StoreStageConfig:
     name: str = "lerobot_v21"
     output_dir: str = "data_gen/output/aloha_mini_lerobot"
     dataset_name: str = "aloha_mini_table_pick"
-    robot_type: str = "aloha_mini_so100_v2"
+    robot_type: str = "aloha_mini_1"
     fps: int = 30
     overwrite: bool = False
     chunk_size: int = 1000

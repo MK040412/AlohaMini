@@ -47,7 +47,7 @@ for m in list(sys.modules.keys()):
         del sys.modules[m]
 # Import agents
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from agents.aloha_mini import AlohaMiniSO100V2
+from agents.aloha_mini import AlohaMini1
 
 import gymnasium as gym
 import mani_skill.envs
@@ -1132,8 +1132,8 @@ def main():
     parser.add_argument('--gpu', action='store_true', help='Use GPU backend')
     parser.add_argument('--backend', choices=['cpu', 'gpu'], default='cpu')
     parser.add_argument('--render', action='store_true', help='Enable human render mode (display window)')
-    parser.add_argument('--robot', default='aloha_mini_so100_v2',
-                        choices=['aloha_mini_so100_v2'],
+    parser.add_argument('--robot', default='aloha_mini_1',
+                        choices=['aloha_mini_1'],
                         help='Robot variant to use')
     args = parser.parse_args()
 

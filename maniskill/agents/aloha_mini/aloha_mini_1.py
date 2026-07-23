@@ -1,7 +1,7 @@
 """
 AlohaMini Robot Agent with ManiSkill SO100 Arms V2 (Parallel Gripper)
 
-This variant uses the maniskill_so100_version.urdf which is based on the
+This variant uses the aloha_mini_1.urdf which is based on the
 official ManiSkill SO100 arm structure (no rotation in base_joint, rotation in
 shoulder_pan).
 
@@ -48,7 +48,7 @@ ALOHA_MINI_RIGHT_GRIPPER_COLLISION_BIT = 28
 
 
 @register_agent()
-class AlohaMiniSO100V2(AlohaMiniBaseAgent):
+class AlohaMini1(AlohaMiniBaseAgent):
     """
     AlohaMini with official ManiSkill SO100 arms + parallel grippers (V2).
 
@@ -72,9 +72,9 @@ class AlohaMiniSO100V2(AlohaMiniBaseAgent):
     interleaving; only hardcoded keyframe qpos arrays must follow this order.
     """
 
-    uid = "aloha_mini_so100_v2"
+    uid = "aloha_mini_1"
     # Use ~/.maniskill/data path where install.py copies the assets
-    urdf_path = str(Path.home() / ".maniskill/data/robots/aloha_mini/maniskill_so100_version.urdf")
+    urdf_path = str(Path.home() / ".maniskill/data/robots/aloha_mini/aloha_mini_1.urdf")
 
     urdf_config = dict(
         _materials=dict(

@@ -1,25 +1,19 @@
 #!/usr/bin/env python3
-"""GUI viewer for every AlohaMini URDF variant — one key per robot.
+"""GUI viewer for the two official AlohaMini robots.
 
-Usage (from maniskill/, Basic_RL venv):
+Usage (from maniskill/, with mani-skill installed):
     python view_urdf.py            # list keys
-    python view_urdf.py so100      # open that robot in the SAPIEN viewer
+    python view_urdf.py mini2      # open that robot in the SAPIEN viewer
 
 Keys:
-    mini     aloha_mini.urdf              original AlohaMini Std (6-DOF arm + jaw gripper)
-    so100    maniskill_so100_version.urdf SO100 arms + roboninecom parallel gripper  [ACTIVE: VLA/vec_datagen]
-    pro_v2   aloha_mini_pro_v2.urdf       Pro arm 5-DOF + parallel gripper graft     [legacy]
-    pro_v3   aloha_mini_pro_v3.urdf       pro_v2 + restored 6th wrist joint          [legacy]
-    am2_pro  alohamini2pro_parallel.urdf  official AlohaMini2 Pro + parallel gripper [ACTIVE: data_gen/tasks + CuRobo IK]
+    mini1    AlohaMini1  aloha_mini_1.urdf  SO100 arms + parallel gripper (repo assets, install.py)
+    mini2    AlohaMini2  aloha_mini_2.urdf  official AM2 Pro arms + parallel gripper (GitHub Releases)
 """
 import sys
 
 KEYS = {
-    "mini": "aloha_mini",
-    "so100": "aloha_mini_so100_v2",
-    "pro_v2": "aloha_mini_pro_v2",
-    "pro_v3": "aloha_mini_pro_v3",
-    "am2_pro": "aloha_mini2_pro",
+    "mini1": "aloha_mini_1",
+    "mini2": "aloha_mini_2",
 }
 
 if len(sys.argv) < 2 or sys.argv[1] not in KEYS:
@@ -30,8 +24,7 @@ uid = KEYS[sys.argv[1]]
 headless = "--headless" in sys.argv  # load-check only, no window
 
 import gymnasium as gym
-import aloha_mini  # noqa: registers aloha_mini (original)
-import agents.aloha_mini  # noqa: registers so100_v2 / pro_v2 / pro_v3 / aloha_mini2_pro
+import agents.aloha_mini  # noqa: registers aloha_mini_1 / aloha_mini_2
 import mani_skill.envs  # noqa
 
 env = gym.make(

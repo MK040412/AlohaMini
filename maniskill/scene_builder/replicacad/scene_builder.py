@@ -324,7 +324,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         if robot_uid == "fetch":
             self.env.agent.reset(self.env.agent.keyframes["rest"].qpos)
             self.env.agent.robot.set_pose(sapien.Pose([-1, 0, 0.02]))
-        elif robot_uid in ["aloha_mini_so100_v2"]:
+        elif robot_uid in ["aloha_mini_1"]:
             # AlohaMini robot initialization
             if hasattr(self.env.agent, 'keyframes') and 'rest' in self.env.agent.keyframes:
                 self.env.agent.reset(self.env.agent.keyframes["rest"].qpos)
@@ -376,7 +376,7 @@ class ReplicaCADSceneBuilder(SceneBuilder):
         robot_uid = self.env.robot_uids
         if robot_uid == "fetch":
             self.disable_fetch_move_collisions(actor, disable_base_collisions)
-        elif robot_uid in ["aloha_mini_so100_v2"]:
+        elif robot_uid in ["aloha_mini_1"]:
             self.disable_aloha_mini_move_collisions(actor, disable_base_collisions)
 
     @property

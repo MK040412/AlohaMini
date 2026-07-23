@@ -64,9 +64,9 @@ def install():
 
     if asset_src.exists():
         print(f"\nInstalling URDF and mesh files to {asset_dst}...")
-        if asset_dst.exists():
-            shutil.rmtree(asset_dst)
-        shutil.copytree(asset_src, asset_dst)
+        # merge-copy: never wipe the destination (it may hold locally-installed
+        # extras such as the AlohaMini2 release assets)
+        shutil.copytree(asset_src, asset_dst, dirs_exist_ok=True)
         print(f"  Copied all files from {asset_src}")
     else:
         print(f"Warning: Asset source directory not found: {asset_src}")
@@ -92,7 +92,7 @@ def install():
         if "aloha_mini" not in content:
             print(f"\nRegistering AlohaMini agent...")
             # Add import for SO100V2 agent
-            new_import = 'from .aloha_mini import AlohaMiniSO100V2, AlohaMiniBaseAgent'
+            new_import = 'from .aloha_mini import AlohaMini1, AlohaMiniBaseAgent'
             if "# Robot imports" in content:
                 content = content.replace("# Robot imports", f"# Robot imports\n{new_import}")
             else:
@@ -104,7 +104,7 @@ def install():
     print("Installation complete!")
     print("="*50)
     print("\nYou can now use the AlohaMini robot in ManiSkill:")
-    print('  robot_uids="aloha_mini_so100_v2"  # SO100 V2 robot')
+    print('  robot_uids="aloha_mini_1"  # SO100 V2 robot')
     print("\nExample:")
     print("  python maniskill/teleop/demo_teleop.py --render")
 

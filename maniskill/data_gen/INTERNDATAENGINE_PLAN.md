@@ -63,7 +63,7 @@ Classes mirror IDE: `ManiSkillDataEngine.run()` + `Load/Plan/Render/StoreStage`;
 `AlohaLmdbWriter`, `LeRobotV21Writer`.
 
 Reuse: env `data_gen/tasks.py` (`AlohaMiniTablePick-v1`, `AlohaMiniPickCube-v1`),
-agent `agents/aloha_mini/aloha_mini_so100_v2.py` (modes `pd_joint_pos`,
+agent `agents/aloha_mini/aloha_mini_1.py` (modes `pd_joint_pos`,
 `pd_joint_delta_pos`, `pd_joint_pos_fixed_base`; cams `cam_main/cam_left_wrist/cam_right_wrist`;
 16-D action = base3+lift1+Larm5+Lgrip1+Rarm5+Rgrip1). Planner uses
 `teleop/kinematics/so100_kinematics_v2.py:SO100KinematicsV2` (planar IK).
@@ -104,7 +104,7 @@ Edit `robots/__init__.py`, `controllers/__init__.py`, `loggers/{utils,lmdb_logge
 
 Joint names from current URDF: left `left_shoulder_pan/lift, left_elbow_flex, left_wrist_flex/roll`;
 right mirror; grippers `*_finger_joint1/2` (limit 0..0.037). Authoritative description =
-`maniskill/assets/robots/aloha_mini/maniskill_so100_version.urdf` (NOT the old ROS `Aloha.urdf`,
+`maniskill/assets/robots/aloha_mini/aloha_mini_1.urdf` (NOT the old ROS `Aloha.urdf`,
 which is a stale 6-joint layout). CuRobo per-arm cfg needs `base_link: left_Base`, `ee_link: left_tcp`,
 collision spheres; if the full mobile/dual URDF is too much, make reduced fixed-base per-arm URDFs.
 

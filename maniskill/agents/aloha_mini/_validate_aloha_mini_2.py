@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Headless validation for the AlohaMini 2 Pro ManiSkill agent (uid=aloha_mini2_pro).
+Headless validation for the AlohaMini 2 Pro ManiSkill agent (uid=aloha_mini_2).
 
 Loads the real dual-arm 6-DOF AM2 Pro robot into an Empty-v1 scene on the CPU
 physx backend (state obs, NO rendering — a photoreal GPU render crashed the
@@ -25,9 +25,9 @@ import mani_skill.envs  # noqa: F401  (registers Empty-v1)
 
 # make `import agents.aloha_mini` importable when run from anywhere
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-import agents.aloha_mini  # noqa: F401  (registers aloha_mini2_pro)
+import agents.aloha_mini  # noqa: F401  (registers aloha_mini_2)
 
-ROBOT = "aloha_mini2_pro"
+ROBOT = "aloha_mini_2"
 CONTROL_MODE = "pd_joint_pos_fixed_base"
 
 # left_arm order = [pan, shoulder_lift, elbow_flex, wrist_flex, wrist_yaw, wrist_roll]

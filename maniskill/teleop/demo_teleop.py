@@ -58,7 +58,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import agents to ensure they are registered
-from agents.aloha_mini import AlohaMiniSO100V2
+from agents.aloha_mini import AlohaMini1
 
 from teleop.controller import TeleopController
 from teleop.config import TeleopConfig
@@ -152,8 +152,8 @@ def main():
     parser.add_argument("--render", action="store_true", help="Enable rendering")
     parser.add_argument("--shader", choices=["default", "rt", "rt-fast"], default="default")
     parser.add_argument("--sim-backend", choices=["cpu", "gpu"], default="gpu")
-    parser.add_argument("--robot", choices=["aloha_mini_so100_v2"],
-                        default="aloha_mini_so100_v2", help="Robot variant")
+    parser.add_argument("--robot", choices=["aloha_mini_1"],
+                        default="aloha_mini_1", help="Robot variant")
     args = parser.parse_args()
 
     pygame.init()

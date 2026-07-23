@@ -1,11 +1,9 @@
 """
-AlohaMini **2 Pro** agent: the REAL AlohaMini 2 Pro — dual-arm, 6-DOF per arm,
-with the roboninecom parallel gripper on each wrist. Ported straight from the
-Isaac / video2sim asset ``alohamini2pro_parallel.urdf`` (the same robot used in
-the video2sim pipeline), NOT the older AM1-class 5-DOF ``aloha_mini_pro_v2``.
-
-Kept alongside ``aloha_mini_pro_v2`` — this is an ADDITIONAL agent, not a
-replacement.
+**AlohaMini 2** agent (uid ``aloha_mini_2``): the official AlohaMini2 Pro —
+dual-arm, 6-DOF per arm, with the roboninecom parallel gripper on each wrist.
+Converted from upstream ``alohamini2pro.urdf`` (liyiteng/alohamini); the same
+robot drives the Isaac / video2sim pipeline. URDF + meshes ship as the
+``aloha_mini_2_urdf.zip`` GitHub Release asset (see maniskill/README.md).
 
 Robot structure (verified against the URDF):
   * virtual mobile base: root_x_axis_joint, root_y_axis_joint (prismatic),
@@ -52,7 +50,7 @@ from mani_skill.utils.structs import Pose
 from mani_skill.utils.structs.actor import Actor
 from mani_skill.utils.structs.link import Link
 
-from .aloha_mini_so100_v2 import AlohaMiniSO100V2
+from .aloha_mini_1 import AlohaMini1
 from .base_agent import AlohaMiniBaseAgent
 
 
@@ -91,7 +89,7 @@ _CAM5 = {
 
 # Collision bits. Reuse the same indices the other AlohaMini variants use — a
 # data-gen scene has a single robot, so sharing the bit indices across variants
-# is harmless (and consistent with aloha_mini_so100_v2 / aloha_mini_pro_v2).
+# is harmless (and consistent with aloha_mini_1).
 _LEFT_CLAMP_BIT = 27       # mutual collision of the LEFT gripper's two clamps
 _RIGHT_CLAMP_BIT = 28      # mutual collision of the RIGHT gripper's two clamps
 _LEFT_ARM_GRIP_BIT = 25    # left arm <-> left gripper spurious self-collision
@@ -99,13 +97,13 @@ _RIGHT_ARM_GRIP_BIT = 26   # right arm <-> right gripper spurious self-collision
 
 
 @register_agent()
-class AlohaMini2Pro(AlohaMiniSO100V2):
+class AlohaMini2(AlohaMini1):
     """AlohaMini 2 Pro: dual-arm 6-DOF + parallel grippers (real AM2 Pro model)."""
 
-    uid = "aloha_mini2_pro"
+    uid = "aloha_mini_2"
     urdf_path = str(
         Path.home()
-        / ".maniskill/data/robots/aloha_mini/aloha_mini2_pro/alohamini2pro_parallel.urdf"
+        / ".maniskill/data/robots/aloha_mini_2/aloha_mini_2.urdf"
     )
 
     # Gripper clamp stroke of the LEADER joint (left/right_right_clamp).
@@ -225,7 +223,7 @@ class AlohaMini2Pro(AlohaMiniSO100V2):
         self.left_gripper_joint_names = ["left_right_clamp", "left_left_clamp"]
         self.right_gripper_joint_names = ["right_right_clamp", "right_left_clamp"]
 
-        # Gains: match the heavier-arm Pro tuning (aloha_mini_pro_v2). Stable at
+        # Gains: heavier-arm Pro tuning. Stable at
         # 100 Hz; stiff enough that the 6-DOF arm does not sag/drift under gravity.
         self.arm_stiffness = 2e3
         self.arm_damping = 4e2
@@ -245,7 +243,7 @@ class AlohaMini2Pro(AlohaMiniSO100V2):
         self.lift_damping = 6e2
         self.lift_force_limit = 400
 
-        # Skip AlohaMiniSO100V2.__init__ (it hardcodes the 5-DOF arm names and the
+        # Skip AlohaMini1.__init__ (it hardcodes the 5-DOF arm names and the
         # finger-joint names); go straight to the shared base-agent initializer.
         AlohaMiniBaseAgent.__init__(self, *args, **kwargs)
 
@@ -286,7 +284,7 @@ class AlohaMini2Pro(AlohaMiniSO100V2):
     # ------------------------------------------------------------------ links
     def _after_init(self):
         # Base links + base collision bit (from AlohaMiniBaseAgent). NOTE: we do
-        # NOT call AlohaMiniSO100V2._after_init — that one binds finger1/finger2
+        # NOT call AlohaMini1._after_init — that one binds finger1/finger2
         # links that do not exist on this model.
         self._after_init_base()
 

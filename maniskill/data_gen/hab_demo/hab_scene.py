@@ -16,7 +16,7 @@ import numpy as np
 OUT_DIR = Path(__file__).resolve().parent
 REPO_MANISKILL = Path("/home/perelman/AlohaMini/maniskill")
 ENV_ID = "ReplicaCAD_SceneManipulation-v1"
-ROBOT_UID = "aloha_mini_pro_v2"
+ROBOT_UID = "aloha_mini_2"
 BUILD_CONFIG_IDX = 5
 SCENE_SEED = 1005
 GRID_RESOLUTION = 0.04

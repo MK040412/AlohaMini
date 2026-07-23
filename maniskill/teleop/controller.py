@@ -26,7 +26,7 @@ class TeleopController:
     - IK computation for both arms
     - Action generation for ManiSkill3 environment
 
-    Action format for aloha_mini_so100_v2 (pd_joint_pos mode):
+    Action format for aloha_mini_1 (pd_joint_pos mode):
     [base_vx, base_vy, base_omega, lift,
      left_j1, left_j2, left_j3, left_j4, left_j5, left_j6,
      right_j1, right_j2, right_j3, right_j4, right_j5, right_j6]
@@ -51,7 +51,7 @@ class TeleopController:
     GRIPPER_OPEN_M = 0.037
     GRIPPER_STEP_M = 0.006
 
-    def __init__(self, config: TeleopConfig = None, robot_variant: str = "aloha_mini_so100_v2"):
+    def __init__(self, config: TeleopConfig = None, robot_variant: str = "aloha_mini_1"):
         """
         Initialize the teleoperation controller.
 
@@ -63,7 +63,7 @@ class TeleopController:
         self.robot_variant = robot_variant
 
         # Initialize kinematics based on robot variant
-        if robot_variant in ["aloha_mini_so100", "aloha_mini_so100_v2"]:
+        if robot_variant in ["aloha_mini_so100", "aloha_mini_1"]:
             # Use SO100KinematicsV2 for SO100 variants
             self.kinematics = SO100KinematicsV2()
             # Use home position from kinematics
@@ -268,7 +268,7 @@ class TeleopController:
 
     def reset_arms(self):
         """Reset both arms to initial positions."""
-        if self.robot_variant in ["aloha_mini_so100", "aloha_mini_so100_v2"]:
+        if self.robot_variant in ["aloha_mini_so100", "aloha_mini_1"]:
             # SO100 variants use home position from kinematics
             initial_x = self.kinematics.initial_ee_x
             initial_y = self.kinematics.initial_ee_y

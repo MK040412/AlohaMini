@@ -73,7 +73,7 @@ def main():
     env = gym.make("AlohaMiniMultiYCB-v1", num_envs=1, obs_mode="state",
                    control_mode="pd_joint_pos_fixed_base", render_mode=None if NOREN else "rgb_array",
                    reward_mode="none", sim_backend="physx_cpu", object_ids=[OBJ],
-                   robot_uid=os.environ.get("PRO_UID", "aloha_mini_pro_v2"), base_xy=(-0.85, -0.75),
+                   robot_uid=os.environ.get("PRO_UID", "aloha_mini_2"), base_xy=(-0.85, -0.75),
                    slot_override_xy=[tuple(PICK_XY)],
                    render_eye=[0.60, -1.05, 1.20], render_target=[-0.05, -0.30, 0.80],
                    human_render_camera_configs={} if NOREN else dict(shader_pack="rt-fast", width=W, height=H),

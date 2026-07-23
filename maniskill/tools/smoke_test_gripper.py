@@ -2,7 +2,7 @@
 """
 End-to-end smoke test for the AlohaMini parallel gripper in ManiSkill.
 
-Loads `aloha_mini_so100_v2` into an Empty-v1 scene on the GPU sim backend and
+Loads `aloha_mini_1` into an Empty-v1 scene on the GPU sim backend and
 checks that:
   * the robot loads with 18 active DOF and the expected joint order,
   * the action space has the expected size (16: base3 + lift1 + arm5+grip1 x2),
@@ -18,7 +18,7 @@ import torch
 import gymnasium as gym
 import mani_skill.envs  # noqa: F401  (registers envs)
 
-ROBOT = "aloha_mini_so100_v2"
+ROBOT = "aloha_mini_1"
 NUM_ENVS = 4
 OPEN = 0.042
 CLOSED = 0.0

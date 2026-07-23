@@ -27,7 +27,7 @@ import numpy as np
 
 URDF = (
     Path(__file__).resolve().parents[1]
-    / "assets/robots/aloha_mini/maniskill_so100_version.urdf"
+    / "assets/robots/aloha_mini/aloha_mini_1.urdf"
 )
 
 EXPECTED_DOF = 18

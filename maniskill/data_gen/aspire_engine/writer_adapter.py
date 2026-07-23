@@ -72,7 +72,7 @@ class AspireStateWriter:
         *,
         fps: int = 20,
         dataset_name: str = "aloha_mini_pro_aspire_state",
-        robot_type: str = "aloha_mini_pro_v2",
+        robot_type: str = "aloha_mini_2",
         overwrite: bool = True,
     ) -> None:
         self.root = Path(output_dir)
