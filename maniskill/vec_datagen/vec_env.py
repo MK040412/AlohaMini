@@ -203,22 +203,32 @@ class AM2MultiObject(BaseEnv):
             self.agent.robot.set_pose(sapien.Pose())
             b = len(env_idx)
             ch = self._cube_half
+            K = len(self.cubes)
+            # Sample every env's layout first, then set each actor ONCE with a
+            # (b, 3) batch. Setting poses inside a per-env loop with a (1, 3)
+            # tensor broadcasts to ALL envs in the reset mask — every env ended
+            # up with the LAST env's layout (one layout per batch).
+            # Layout seeds come from the episode RNG, which env.reset(seed=...)
+            # seeds — layouts differ per env AND per reset, reproducibly.
+            cube_xy = np.zeros((b, K, 2), np.float32)
+            marker_xy = np.zeros((b, 2), np.float32)
             for j in range(b):
-                # per-env layout seed drawn from the episode RNG, which
-                # env.reset(seed=...) seeds — so layouts differ per env AND per
-                # reset. (A previous options-based ternary was dead: ManiSkill
-                # normalizes options to {}, which is falsy.)
                 seed = int(self._episode_rng.randint(2 ** 31))
-                pts = self._sample_positions(1, len(self.cubes), seed)
-                for i, cube in enumerate(self.cubes):
-                    x, y = pts[i]
-                    p = torch.tensor([[x, y, TABLE_TOP_Z + ch]])
-                    q = torch.zeros(1, 4); q[:, 0] = 1
-                    cube.set_pose(MSPose.create_from_pq(p=p, q=q))
-                mx, my = pts[-1]
-                self.target.set_pose(MSPose.create_from_pq(
-                    p=torch.tensor([[mx, my, TABLE_TOP_Z + 0.002]]),
-                    q=torch.tensor([[1.0, 0, 0, 0]])))
+                pts = self._sample_positions(1, K, seed)
+                cube_xy[j] = np.asarray(pts[:K], np.float32)
+                marker_xy[j] = pts[-1]
+            q = torch.zeros(b, 4); q[:, 0] = 1
+            for i, cube in enumerate(self.cubes):
+                p = torch.zeros(b, 3)
+                p[:, 0] = torch.from_numpy(cube_xy[:, i, 0])
+                p[:, 1] = torch.from_numpy(cube_xy[:, i, 1])
+                p[:, 2] = TABLE_TOP_Z + ch
+                cube.set_pose(MSPose.create_from_pq(p=p, q=q))
+            mp = torch.zeros(b, 3)
+            mp[:, 0] = torch.from_numpy(marker_xy[:, 0])
+            mp[:, 1] = torch.from_numpy(marker_xy[:, 1])
+            mp[:, 2] = TABLE_TOP_Z + 0.002
+            self.target.set_pose(MSPose.create_from_pq(p=mp, q=q))
 
     def evaluate(self):
         return {"cube0_z": self.cubes[0].pose.p[:, 2]}
