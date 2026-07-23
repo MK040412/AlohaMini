@@ -1,5 +1,5 @@
 """
-AlohaMini Robot Agent with ManiSkill SO100 Arms V2 (Parallel Gripper)
+AlohaMini 1 agent: ManiSkill SO100 arms + parallel gripper.
 
 This variant uses the aloha_mini_1.urdf which is based on the
 official ManiSkill SO100 arm structure (no rotation in base_joint, rotation in
@@ -50,7 +50,7 @@ ALOHA_MINI_RIGHT_GRIPPER_COLLISION_BIT = 28
 @register_agent()
 class AlohaMini1(AlohaMiniBaseAgent):
     """
-    AlohaMini with official ManiSkill SO100 arms + parallel grippers (V2).
+    AlohaMini 1: official ManiSkill SO100 arms + parallel grippers.
 
     This robot uses virtual base joints and SO100 arm structure:
     - root_x_axis_joint: prismatic joint for X movement

@@ -63,7 +63,7 @@ One `ep_<id>.npz` per successful episode in `instr_out/` (or `--out-dir`):
 | `action` | (T, 18) | commanded actions (base 3 + lift 1 + arm 6 + grip 1, ×2 arms) |
 | `phase` | (T,) str | `locate / approach / descend / grasp / lift` |
 | `obj_positions` | (T, K, 3) | live cube positions per step |
-| `target_pos` | (T, 3) | target cube start position |
+| `target_pos` | (T, 3) | place-marker position (the gray disk — not the cube; cube positions are in `obj_positions`) |
 | `colors`, `target_color`, `target_idx` | — | scene colors + which one is the goal |
 | `instruction` | str | `"pick up the {color} cube"` |
 | `seed`, `cube_half` | — | episode id, cube half-size (m) |
@@ -86,5 +86,5 @@ vec_datagen/
 ├── vec_env.py              # AM2VecPickPlace-v1 / AM2MultiObject-v1 environments
 ├── curobo_pickplace.py     # CuRobo planning helpers (TCP frame, stations, plan_batch)
 ├── curobo_am2pro_left.yml  # CuRobo robot config for the AlohaMini 2 left arm
-└── batched_ik.py           # batched DLS IK (pytorch_kinematics), CuRobo-free fallback
+└── batched_ik.py           # standalone batched DLS IK (needs pytorch_kinematics; self-test: python -m vec_datagen.batched_ik)
 ```

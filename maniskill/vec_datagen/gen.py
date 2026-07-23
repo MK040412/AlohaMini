@@ -52,6 +52,16 @@ def main() -> int:
             setattr(args, k.replace("-", "_"), v)
     colors = args.colors.split(",") if isinstance(args.colors, str) else list(args.colors)
 
+    # fail fast on a bad color name — the same typo inside the subprocess only
+    # surfaces as a KeyError AFTER the ~30 s CuRobo warmup
+    try:
+        from vec_datagen.vec_env import NAMED_COLORS
+        bad = [c for c in colors if c not in NAMED_COLORS]
+        if bad:
+            ap.error(f"unknown color(s) {bad}; valid: {', '.join(sorted(NAMED_COLORS))}")
+    except ImportError:
+        pass  # mani_skill not importable here; the subprocess will validate
+
     env = os.environ.copy()
     env["STATION_NOISE"] = str(args.station_noise)
     env["YAW_RAND"] = "1" if args.yaw_rand else "0"
@@ -68,8 +78,13 @@ def main() -> int:
     r = subprocess.run(cmd, env=env, cwd=HERE.parent)
     out = Path(env.get("INSTR_OUT_DIR", HERE / "instr_out"))
     n = len(list(out.glob("*.npz")))
-    print(f"[GEN] done (exit {r.returncode}) — {n} episode files now in {out}")
-    return r.returncode
+    if r.returncode != 0:
+        print(f"[GEN] FAIL (exit {r.returncode}) — generation needs a CUDA GPU, CuRobo in this venv,")
+        print("[GEN] and the AlohaMini 2 assets. Check the traceback above, and run:")
+        print("[GEN]     python install.py --check")
+        return r.returncode
+    print(f"[GEN] done — {n} episode files now in {out}")
+    return 0
 
 
 if __name__ == "__main__":

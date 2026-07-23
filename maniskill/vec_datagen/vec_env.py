@@ -204,8 +204,11 @@ class AM2MultiObject(BaseEnv):
             b = len(env_idx)
             ch = self._cube_half
             for j in range(b):
-                seed = int(env_idx[j].item()) * 7919 + int(options.get("episode_seed", 0)) \
-                    if options else int(env_idx[j].item())
+                # per-env layout seed drawn from the episode RNG, which
+                # env.reset(seed=...) seeds — so layouts differ per env AND per
+                # reset. (A previous options-based ternary was dead: ManiSkill
+                # normalizes options to {}, which is falsy.)
+                seed = int(self._episode_rng.randint(2 ** 31))
                 pts = self._sample_positions(1, len(self.cubes), seed)
                 for i, cube in enumerate(self.cubes):
                     x, y = pts[i]

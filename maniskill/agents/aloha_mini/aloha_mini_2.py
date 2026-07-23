@@ -31,7 +31,7 @@ Active-joint (qpos) order, 20 DOF — SAPIEN interleaves the two arms (verified)
   16-17  left gripper:  left_right_clamp, left_left_clamp
   18-19  right gripper: right_right_clamp, right_left_clamp
 """
-from copy import deepcopy
+
 from pathlib import Path
 
 import numpy as np

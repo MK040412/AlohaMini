@@ -13,15 +13,19 @@ the policy can learn nav+manip -- the fix for the months-long 0/6). Grasp-dwell 
 close + hold) teaches STAY+close. Successful (grasp+lift the TARGET) episodes are saved
 in the instr_out multi-object format so the existing 5-cam render/train/eval reuses them.
 
-Usage: <basicrl_python> vec_pick_gen_mo.py [n_batches] [N_envs] [ep_base] [c0 c1 c2]
-Env: INSTR_OUT_DIR override, PLAN_CAP (default 160).
+Usage: python vec_pick_gen_mo.py [n_batches] [N_envs] [ep_base] [c0 c1 c2]
+       (prefer the front-end: python -m vec_datagen.gen --help)
+Env: INSTR_OUT_DIR (output dir), PLAN_CAP (default 160), GRASP_YAW,
+     STATION_NOISE, YAW_RAND, GRASP_DART_N, ARM_INIT_NOISE (diversity knobs —
+     gen.py sets these from its flags).
 """
 import os, sys, time, numpy as np, torch, gymnasium as gym
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import agents.aloha_mini, vec_datagen.vec_env  # noqa
 import vec_datagen.curobo_pickplace as cpp
 from vec_datagen.curobo_pickplace import (CFG_YML, TIP_Z, HOVER_DZ, LIFT, LB0, DES_BX, DES_BY,
-                                          Frame, topdown_quat_world)
+                                          Frame, topdown_quat_world,
+                                          LEFT_ARM_QIDX, GRIP_OPEN, GRIP_CLOSED, RIGHT_FOLD)
 from curobo.types.base import TensorDeviceType
 from curobo.types.robot import RobotConfig
 from curobo.types.state import JointState
@@ -31,10 +35,8 @@ from curobo.geom.types import WorldConfig, Cuboid
 from curobo.geom.sdf.world import CollisionCheckerType
 from curobo.wrap.reacher.motion_gen import MotionGen, MotionGenConfig, MotionGenPlanConfig
 
-TABLE_TOP_Z = 0.70
-LEFT_ARM_QIDX = [4, 6, 8, 10, 12, 14]
+TABLE_TOP_Z = 0.70  # must match vec_env.TABLE_TOP_Z and curobo_pickplace.TABLE_TOP_Z
 ARM_LO = np.array([-1.92, -3.32, -0.17, -1.66, -2.79, -2.84]); ARM_HI = np.array([1.92, 0.17, 3.14, 1.66, 2.79, 2.84])
-GRIP_OPEN, GRIP_CLOSED = 0.037, 0.0; RIGHT_FOLD = np.array([0.0, -1.5, 2.5, 0.0, 0.0, 0.0])
 # station_for centres EVERY env's target at the same base-frame spot [DES_BX,DES_BY], so
 # the goal pose is identical across envs -> a single wrist yaw that plans works for all.
 # yaw=0 is IK-unreachable at this config (verified); 0.7854 is the first TOPDOWN_YAWS hit.
@@ -65,7 +67,7 @@ def main(n_batches=7, N=16, ep_base=500000, colors=("red", "green", "blue"), cub
     PC = MotionGenPlanConfig(max_attempts=6, enable_graph=False, timeout=15.0)
     print(f"[MOGEN] warmup(batch={N}) {time.time()-t0:.1f}s", flush=True)
 
-    cz = TABLE_TOP_Z + cube_half                                # cube-top height for the grasp target
+    cz = TABLE_TOP_Z + cube_half                                # cube CENTER height (grasp target z)
     env = gym.make("AM2MultiObject-v1", num_envs=N, sim_backend="physx_cuda", obs_mode="state",
                    control_mode="pd_joint_pos_fixed_base", render_mode=None, reward_mode="none",
                    obj_colors=tuple(colors), cube_half=cube_half)
@@ -120,7 +122,7 @@ def main(n_batches=7, N=16, ep_base=500000, colors=("red", "green", "blue"), cub
             rec_q.append(u.agent.robot.get_qpos().cpu().numpy().astype(np.float32))            # (N,dof)
             A = np.zeros((N, 18), np.float32)
             A[:, 0:3] = base3; A[:, 3] = LIFT; A[:, 4:10] = arm6
-            A[:, 10] = grip if np.ndim(grip) else grip; A[:, 11:17] = RIGHT_FOLD; A[:, 17] = GRIP_CLOSED
+            A[:, 10] = grip; A[:, 11:17] = RIGHT_FOLD; A[:, 17] = GRIP_CLOSED
             rec_a.append(A); rec_ph.append(phase)
             rec_o.append(np.stack([c.pose.p.cpu().numpy() for c in u.cubes], axis=1).astype(np.float32))  # (N,K,3) per step
 
@@ -208,7 +210,7 @@ def main(n_batches=7, N=16, ep_base=500000, colors=("red", "green", "blue"), cub
         for j in np.where(success)[0]:
             gid = ep_base + bi * N + int(j)
             tp = u.target.pose.p[j].cpu().numpy()
-            instr = f"pick up the {colors[tgt_idx[j]]} cube and place it on the marker"
+            instr = f"pick up the {colors[tgt_idx[j]]} cube"  # episodes end at lift; no place phase is recorded
             np.savez_compressed(os.path.join(OUT_DIR, f"ep_{gid}.npz"),
                                 qpos=Q[j], action=A[j], phase=PH,
                                 obj_positions=O[j],

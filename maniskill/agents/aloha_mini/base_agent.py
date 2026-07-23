@@ -2,7 +2,7 @@
 Base Agent for AlohaMini Robot variants.
 
 This module provides the common base functionality shared between
-AlohaMiniVirtual and AlohaMini1 agents, following DRY principle.
+the AlohaMini1 and AlohaMini2 agents.
 """
 
 from abc import abstractmethod

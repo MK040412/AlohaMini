@@ -21,7 +21,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from robots import ROBOTS, register_agents
+from robots import ROBOTS, ensure_assets, register_agents
 
 DATA_DIR = Path.home() / ".maniskill" / "data"
 
@@ -30,7 +30,8 @@ SCENES = {
     "empty": ("Empty-v1", ("mini1", "mini2"), "mini2", None),
     "table": ("AlohaMiniTablePick-v1", ("mini1",), "mini1", None),
     "ycb": ("AlohaMiniMultiYCB-v1", ("mini1",), "mini1", "ycb"),
-    "replicacad": ("ReplicaCAD_SceneManipulation-v1", ("mini1", "mini2"), "mini1", "replicacad"),
+    # mini1 only: the shipped ReplicaCAD scene-builder patch special-cases aloha_mini_1
+    "replicacad": ("ReplicaCAD_SceneManipulation-v1", ("mini1",), "mini1", "replicacad"),
 }
 ASSETS = {
     "ycb": (DATA_DIR / "assets" / "mani_skill2_ycb",
@@ -61,6 +62,8 @@ def main() -> int:
             print(f"[DEMO] '{args.scene}' needs assets that are not installed ({path}).")
             print(f"[DEMO] download them once with:\n    {cmd}")
             return 1
+    if not ensure_assets(ROBOTS[robot]):
+        return 1
 
     import gymnasium as gym
     register_agents()

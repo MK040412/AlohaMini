@@ -22,3 +22,28 @@ def register_agents() -> None:
         import mani_skill.agents.robots.aloha_mini  # noqa: F401
     except ImportError:
         import agents.aloha_mini  # noqa: F401
+
+
+def ensure_assets(uid: str) -> bool:
+    """Check the robot's URDF is installed; if not, print how to get it.
+
+    Keeps user tools from dying in a raw loader traceback when the AlohaMini 2
+    release zip (a separate download) was skipped.
+    """
+    from pathlib import Path
+
+    urdf = {
+        "aloha_mini_1": Path.home() / ".maniskill/data/robots/aloha_mini/aloha_mini_1.urdf",
+        "aloha_mini_2": Path.home() / ".maniskill/data/robots/aloha_mini_2/aloha_mini_2.urdf",
+    }[uid]
+    if urdf.exists():
+        return True
+    print(f"[ROBOTS] {uid} assets are not installed ({urdf}).")
+    if uid == "aloha_mini_1":
+        print("[ROBOTS] install them with:\n    python install.py")
+    else:
+        print("[ROBOTS] download them once with:")
+        print("    wget https://github.com/MK040412/AlohaMini/releases/download/"
+              "urdf-assets-v1/aloha_mini_2_urdf.zip")
+        print("    unzip aloha_mini_2_urdf.zip -d ~/.maniskill/data/robots/")
+    return False

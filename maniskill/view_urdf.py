@@ -12,7 +12,7 @@ Keys:
 """
 import sys
 
-from robots import ROBOTS, register_agents
+from robots import ROBOTS, ensure_assets, register_agents
 
 if len(sys.argv) < 2 or sys.argv[1] not in ROBOTS:
     print(__doc__)
@@ -20,6 +20,8 @@ if len(sys.argv) < 2 or sys.argv[1] not in ROBOTS:
 
 uid = ROBOTS[sys.argv[1]]
 headless = "--headless" in sys.argv  # load-check only, no window
+if not ensure_assets(uid):
+    sys.exit(1)
 
 import gymnasium as gym
 register_agents()

@@ -96,7 +96,7 @@ Close the window to exit. `python view_urdf.py` / `python demo.py --help` list a
 
 ## 3. Python API
 
-Minimal example — spawn AlohaMini 2 in an empty scene and step it (works headless, no extra assets). Save it as e.g. `demo.py` and run `python demo.py` — any directory works:
+Minimal example — spawn AlohaMini 2 in an empty scene and step it (works headless, no extra assets). Save it as e.g. `my_demo.py` and run `python my_demo.py` — any directory works:
 
 ```python
 import gymnasium as gym
@@ -240,7 +240,7 @@ python demo.py replicacad --render --shader rt-fast
 
 | Option | Values | Meaning |
 |--------|--------|---------|
-| `--robot` | `mini1` / `mini2` | robot choice, where the scene allows it (`empty`, `replicacad`) |
+| `--robot` | `mini1` / `mini2` | robot choice, where the scene allows it (`empty`) |
 | `--render` | flag | open the SAPIEN viewer (default: headless) |
 | `--steps` | int | headless step count (default 100) |
 | `--shader` | `default` / `rt-fast` / `rt` | render quality, fast → best |
