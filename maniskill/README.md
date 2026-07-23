@@ -1,255 +1,267 @@
-# AlohaMini ManiSkill3 Integration
+# AlohaMini — ManiSkill3 Simulation
 
-Integration guide for using the AlohaMini dual-arm mobile robot in ManiSkill3 simulation environment.
+Simulate the AlohaMini dual-arm mobile robot in [ManiSkill3](https://maniskill.readthedocs.io/) / SAPIEN.
+Two official robot models, ready-made tabletop pick/place/stack environments, a GUI robot viewer, and keyboard/VR teleoperation.
 
-## Overview
+| Robot | UID | Arms | Actions | Assets |
+|-------|-----|------|---------|--------|
+| **AlohaMini 1** | `aloha_mini_1` | SO100 (5-DOF) + parallel gripper | 16 | in this repo (installed by `install.py`) |
+| **AlohaMini 2** | `aloha_mini_2` | official AM2 Pro (6-DOF) + parallel gripper | 18 | [release zip](https://github.com/MK040412/AlohaMini/releases/tag/urdf-assets-v1) (step 2 below) |
 
-AlohaMini is a dual-arm mobile robot. Two official models are provided (see [Robots](#robots)):
+Both are mobile: virtual planar base (x, y, rotation) + a vertical lift, with two arms on the lift carriage.
 
-- **AlohaMini 1** (`aloha_mini_1`) — SO100 arms + parallel gripper. 16 DOF actions (base 3 + lift 1 + 2 x arm 6).
-- **AlohaMini 2** (`aloha_mini_2`) — official AlohaMini2 Pro arms + parallel gripper. 18 DOF actions (base 3 + lift 1 + 2 x (arm 6 + gripper 1)).
+---
 
-Both share the same base layout:
-- **Mobile Base**: Virtual prismatic X/Y + rotation joints
-- **Vertical Lift**: 1 DOF prismatic joint
-- **Dual Arms**: Left/Right 6 DOF manipulators
+## 1. Setup
 
-## Directory Structure
-
-```
-maniskill/
-├── agents/aloha_mini/           # Agent class files
-│   ├── __init__.py
-│   ├── base_agent.py            # AlohaMiniBaseAgent (abstract)
-│   ├── aloha_mini_1.py          # AlohaMini1 (SO100 arms)
-│   └── aloha_mini_2.py          # AlohaMini2 (AM2 Pro arms)
-├── assets/robots/aloha_mini/    # AlohaMini 1 URDF + meshes
-│   ├── aloha_mini_1.urdf
-│   ├── meshes/ so100_meshes/ clamp_meshes/
-├── teleop/                      # Teleoperation module
-│   ├── demo_teleop.py           # Keyboard IK teleop (recommended)
-│   ├── demo_vr_teleop_stream.py # VR teleop + camera streaming
-│   ├── controller.py            # TeleopController
-│   ├── config.py                # TeleopConfig
-│   ├── inputs/                  # Input handlers (keyboard, VR)
-│   ├── kinematics/              # IK modules
-│   └── web_ui_stream/           # VR web UI
-├── examples/                    # Example scripts
-│   ├── demo_ee_keyboard.py      # EE keyboard control
-│   └── run_replicacad.py        # ReplicaCAD environment
-├── scene_builder/replicacad/    # Modified scene builder
-│   └── scene_builder.py
-├── install.py                   # Installation script
-├── setup.py                     # Package setup
-└── README.md
-```
-
-## Installation
-
-### Using UV (Recommended - Faster)
-
-[UV](https://github.com/astral-sh/uv) is a fast Python package installer.
+Requirements: Linux, Python 3.10–3.11. A GPU is optional (physics runs on CPU); the GUI viewer needs a display + Vulkan.
 
 ```bash
-# Install UV (if not installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+git clone https://github.com/MK040412/AlohaMini.git
+cd AlohaMini/maniskill
 
-# Create virtual environment and install dependencies
-uv venv
-source .venv/bin/activate  # Linux/Mac
-# or: .venv\Scripts\activate  # Windows
-
+# Python environment (uv — https://github.com/astral-sh/uv)
+uv venv --python 3.11
+source .venv/bin/activate
 uv pip install mani-skill pygame websockets Pillow
 
-# Install AlohaMini
-cd maniskill
+# Install both robot agents + AlohaMini 1 assets into ManiSkill
 python install.py
-```
 
-### Using pip (Alternative)
-
-```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or: venv\Scripts\activate  # Windows
-
-# Install dependencies
-pip install mani-skill pygame websockets Pillow
-
-# Install AlohaMini
-cd maniskill
-python install.py
-```
-
-### What install.py does
-
-- Copies agent files to ManiSkill installation
-- Copies the AlohaMini 1 URDF/meshes to `~/.maniskill/data/robots/aloha_mini/`
-- Updates ReplicaCAD scene builder
-
-### AlohaMini 2 assets (one extra step)
-
-AlohaMini 2's URDF + meshes are too large for the repo — download them from
-[Releases](https://github.com/MK040412/AlohaMini/releases/tag/urdf-assets-v1):
-
-```bash
+# AlohaMini 2 assets are a separate ~100 MB download (too large for the repo)
+wget https://github.com/MK040412/AlohaMini/releases/download/urdf-assets-v1/aloha_mini_2_urdf.zip
 unzip aloha_mini_2_urdf.zip -d ~/.maniskill/data/robots/
-# -> ~/.maniskill/data/robots/aloha_mini_2/aloha_mini_2.urdf
+rm aloha_mini_2_urdf.zip
 ```
 
-Verify both robots load:
+<details>
+<summary>No uv? Same thing with plain pip</summary>
 
 ```bash
-cd maniskill
-python view_urdf.py mini1
-python view_urdf.py mini2
+python3 -m venv .venv
+source .venv/bin/activate
+pip install mani-skill pygame websockets Pillow
+python install.py
+wget https://github.com/MK040412/AlohaMini/releases/download/urdf-assets-v1/aloha_mini_2_urdf.zip
+unzip aloha_mini_2_urdf.zip -d ~/.maniskill/data/robots/
+rm aloha_mini_2_urdf.zip
+```
+</details>
+
+### Verify
+
+```bash
+python install.py --check              # prints OK/FAIL per component, with the fix for each FAIL
+python view_urdf.py mini1 --headless   # loads AlohaMini 1 in the simulator, no window
+python view_urdf.py mini2 --headless   # loads AlohaMini 2 in the simulator, no window
 ```
 
-### Uninstall
+Expected output of the last two:
 
-```bash
-python install.py --uninstall
+```
+[VIEW] aloha_mini_1: URDF loaded OK (...)
+[VIEW] aloha_mini_2: URDF loaded OK (...)
 ```
 
-## Robots
+`install.py` is idempotent — re-run it any time (e.g. after `pip install -U mani-skill`). `python install.py --uninstall` removes everything it added.
 
-Two official robots. Everything else was a prototype and has been removed.
+---
 
-| Robot | Agent / UID | URDF | Get it from |
-|-------|-------------|------|-------------|
-| **AlohaMini 1** | `AlohaMini1` / `aloha_mini_1` | `aloha_mini_1.urdf` — SO100 arms + roboninecom parallel gripper | this repo (`assets/robots/aloha_mini/`); `python install.py` copies it to `~/.maniskill/data/robots/aloha_mini/` |
-| **AlohaMini 2** | `AlohaMini2` / `aloha_mini_2` | `aloha_mini_2.urdf` — official AlohaMini2 Pro arms + parallel gripper, black motors | GitHub **Releases** of this repo (zip with meshes); extract to `~/.maniskill/data/robots/` |
+## 2. Look at the robots (GUI viewer)
 
-> **Note**: Both use a virtual base (prismatic X/Y + rotation) for stable locomotion.
-
-Upstream source models (reference only, not needed at runtime):
-
-- `alohamini2pro.urdf` — [liyiteng/alohamini](https://github.com/liyiteng/alohamini) `AlohaMini2/urdf/alohamini2pro/urdf/` (the arm model AlohaMini 2 was converted from)
-- `so_101.urdf.xacro` — [roboninecom/SO-ARM100-101-Parallel-Gripper](https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper) `simulation/so_arm_101_description/urdf/` (the parallel-gripper donor)
-
-View either robot in the SAPIEN GUI:
+On a machine with a display:
 
 ```bash
-python view_urdf.py            # list keys
-python view_urdf.py mini2      # mini1 | mini2
+python view_urdf.py mini1    # AlohaMini 1 in the SAPIEN viewer
+python view_urdf.py mini2    # AlohaMini 2 (black motors)
 ```
 
-## Quick Start
+Close the window to exit. `python view_urdf.py` with no argument lists the keys.
 
-### Keyboard IK Teleoperation (Recommended)
+---
+
+## 3. Python API
+
+Minimal example — spawn AlohaMini 2 in an empty scene and step it (works headless, no extra assets):
+
+```python
+import gymnasium as gym
+import mani_skill.envs                       # registers ManiSkill environments
+import mani_skill.agents.robots.aloha_mini   # registers aloha_mini_1 / aloha_mini_2
+
+env = gym.make(
+    "Empty-v1",
+    robot_uids="aloha_mini_2",     # or "aloha_mini_1"
+    obs_mode="state",
+    sim_backend="physx_cpu",
+    reward_mode="none",
+)
+obs, info = env.reset(seed=0)
+for _ in range(100):
+    obs, reward, terminated, truncated, info = env.step(env.action_space.sample() * 0)
+env.close()
+```
+
+Add `render_mode="human"` and call `env.render()` each step to watch it live.
+
+---
+
+## 4. Task environments
+
+The repo ships ready-made tabletop environments. They are registered by importing their module, and they run **from the `maniskill/` directory**:
+
+```python
+import gymnasium as gym
+import data_gen.tasks        # registers the AlohaMini* environments (AlohaMini 1)
+import vec_datagen.vec_env   # registers the AM2* environments (AlohaMini 2)
+
+env = gym.make("AlohaMiniTablePick-v1", obs_mode="state",
+               sim_backend="physx_cpu", reward_mode="none")
+obs, info = env.reset(seed=0)
+obs, reward, terminated, truncated, info = env.step(env.action_space.sample() * 0)
+```
+
+| Environment | Robot | Task |
+|-------------|-------|------|
+| `AlohaMiniTablePick-v1` | 1 | pick a cube off a raised table (left arm) |
+| `AlohaMiniPickPlace-v1` | 1 | pick the red cube, place it on a goal platform |
+| `AlohaMiniStack-v1` | 1 | stack the red cube on the blue cube |
+| `AlohaMiniPickCube-v1` | 1 | ManiSkill PickCube task adapted to AlohaMini |
+| `AlohaMiniMultiYCB-v1` | 1 | multi-object YCB tabletop pick (needs YCB assets, below) |
+| `AlohaMiniGripperView-v1` | 1 | close-up gripper inspection camera |
+| `AM2VecPickPlace-v1` | 2 | table pick-place with per-env domain randomization, built for GPU batching |
+| `AM2MultiObject-v1` | 2 | multiple colored cubes + place marker, per-env target |
+
+Notes:
+
+- `AlohaMiniMultiYCB-v1` needs the YCB object set once: `python -m mani_skill.utils.download_asset ycb`
+- The `AM2*` environments also run batched on GPU: `gym.make(..., num_envs=16, sim_backend="physx_cuda")`
+- These environments provide observations/success flags for scripted data generation, not shaped rewards — hence `reward_mode="none"`.
+
+---
+
+## 5. Control modes and action spaces
+
+Both robots expose three control modes (pass `control_mode=...` to `gym.make`):
+
+| Mode | Base | Arms | Use for |
+|------|------|------|---------|
+| `pd_joint_pos` (default) | velocity | absolute position | general control, teleop |
+| `pd_joint_delta_pos` | velocity | delta position | RL policies |
+| `pd_joint_pos_fixed_base` | position-held | absolute position | scripted manipulation / data generation |
+
+Action layout (`pd_joint_pos`):
+
+**AlohaMini 1 — 16 actions**
+
+| Index | Group | Meaning |
+|-------|-------|---------|
+| 0–2 | base | x vel, y vel, yaw vel |
+| 3 | lift | height (m) |
+| 4–8 | left arm | shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll (rad) |
+| 9 | left gripper | 0.0 closed → 0.037 open (m) |
+| 10–14 | right arm | same 5 joints |
+| 15 | right gripper | 0.0 closed → 0.037 open (m) |
+
+**AlohaMini 2 — 18 actions**
+
+| Index | Group | Meaning |
+|-------|-------|---------|
+| 0–2 | base | x vel, y vel, yaw vel |
+| 3 | lift | height (m), travel −0.3…+0.3 |
+| 4–9 | left arm | shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_yaw, wrist_roll (rad) |
+| 10 | left gripper | 0.0 closed → 0.037 open (m) |
+| 11–16 | right arm | same 6 joints |
+| 17 | right gripper | 0.0 closed → 0.037 open (m) |
+
+Each gripper is one action: the two clamp joints are mirror-coupled in the controller. AlohaMini 2 additionally carries the 5 real cameras (front/back/chest + both wrists) as sensor cameras at their true mount poses.
+
+---
+
+## 6. Teleoperation
+
+Keyboard IK teleop (AlohaMini 1):
 
 ```bash
-cd maniskill/teleop
+cd teleop
 python demo_teleop.py --render
 ```
 
-**Controls (XLeRobot Style)**:
-
-| Left Arm | Right Arm | Function |
+| Left arm | Right arm | Function |
 |----------|-----------|----------|
-| Q/A | U/J | Shoulder Pan -/+ |
-| W/S | I/K | End-Effector X (forward/back) |
-| E/D | O/L | End-Effector Y (down/up) |
-| R/F | P/; | Pitch -/+ |
-| T/G | [/' | Wrist Roll -/+ |
-| Y/H | ]/\ | Gripper close/open |
+| Q/A | U/J | shoulder pan −/+ |
+| W/S | I/K | end-effector forward/back |
+| E/D | O/L | end-effector down/up |
+| R/F | P/; | pitch −/+ |
+| T/G | [/' | wrist roll −/+ |
+| Y/H | ]/\ | gripper close/open |
 
-| General | Function |
-|---------|----------|
-| SPACE | Reset arms to initial position |
-| X/ESC | Exit |
+SPACE resets the arms, X or ESC exits. Keep the pygame window focused.
 
-### VR Teleoperation (Camera Streaming)
+VR teleop with camera streaming: `python demo_vr_teleop_stream.py`, then open `https://<your-ip>:8443` in the headset browser.
+
+---
+
+## 7. ReplicaCAD apartment scene (optional)
+
+Drive AlohaMini around a full apartment. One-time asset download, then:
 
 ```bash
-cd maniskill/teleop
-python demo_vr_teleop_stream.py
+python -m mani_skill.utils.download_asset ReplicaCAD
 ```
-
-Access `https://<your-ip>:8443` from VR headset browser.
-
-## Python API
 
 ```python
 import gymnasium as gym
 import mani_skill.envs
+import mani_skill.agents.robots.aloha_mini
 
-# Import agent to register
-from mani_skill.agents.robots import aloha_mini
-
-# Create environment
 env = gym.make(
     "ReplicaCAD_SceneManipulation-v1",
     robot_uids="aloha_mini_1",
     render_mode="human",
-    sim_backend="gpu",
     control_mode="pd_joint_pos",
-    sensor_configs=dict(shader_pack="rt-fast"),
-    human_render_camera_configs=dict(shader_pack="rt-fast"),
-    enable_shadow=True,
 )
-
 obs, info = env.reset(options=dict(reconfigure=True))
-
 while True:
-    action = env.action_space.sample() * 0.1
-    obs, reward, terminated, truncated, info = env.step(action)
+    obs, *_ = env.step(env.action_space.sample() * 0.1)
     env.render()
 ```
 
-## Controllers
+Shader quality: `sensor_configs=dict(shader_pack=...)` with `default` (fast) / `rt-fast` / `rt` (best).
 
-### Action Space (pd_joint_pos)
-
-| Index | Joint | Description |
-|-------|-------|-------------|
-| 0 | base_x | X velocity (forward/back) |
-| 1 | base_y | Y velocity (left/right) |
-| 2 | base_rot | Rotation velocity |
-| 3 | lift | Lift position |
-| 4-9 | left_arm | Left arm 6 joints |
-| 10-15 | right_arm | Right arm 6 joints |
-
-**Total 16 DOF**
-
-## Shader Options
-
-| Shader | Description | Performance |
-|--------|-------------|-------------|
-| `default` | Basic rasterizer | Fast |
-| `rt-fast` | Fast ray tracing | Medium |
-| `rt` | High quality ray tracing | Slow |
+---
 
 ## Troubleshooting
 
-### Black Screen
+| Symptom | Fix |
+|---------|-----|
+| `install.py --check` prints FAIL | the FAIL line itself prints the exact fix command |
+| `AlohaMini 2 assets: MISSING` | you skipped the release zip — run the `wget` + `unzip` from step 1 |
+| `ImportError` on `mani_skill.agents.robots.aloha_mini` | re-run `python install.py` (also needed after reinstalling mani-skill) |
+| GUI viewer fails / black screen | you need a display + Vulkan; use `--headless` to verify on a server, or `shader_pack="default"` and call `env.render()` every step |
+| `NotImplementedError` in `get_reward` | pass `reward_mode="none"` (the task envs define success, not dense rewards) |
+| keyboard teleop ignores keys | click the pygame window to focus it |
 
-```python
-env = gym.make(
-    ...,
-    sensor_configs=dict(shader_pack="default"),
-    human_render_camera_configs=dict(shader_pack="default"),
-    enable_shadow=True,
-)
+## Repository layout
+
+```
+maniskill/
+├── install.py                # installer: agents + assets + registration (--check / --uninstall)
+├── view_urdf.py              # GUI / headless robot viewer
+├── agents/aloha_mini/        # AlohaMini1, AlohaMini2 agent classes (+ _validate_aloha_mini_2.py)
+├── assets/robots/aloha_mini/ # AlohaMini 1 URDF + meshes (AlohaMini 2 comes from Releases)
+├── data_gen/tasks.py         # AlohaMini* task environments
+├── vec_datagen/vec_env.py    # AM2* GPU-batchable environments
+├── teleop/                   # keyboard / VR teleoperation
+└── scene_builder/            # ReplicaCAD scene-builder patch
 ```
 
-Make sure to call `env.render()` every step.
-
-### Keyboard Input Not Working
-
-Focus on the pygame window. Demo scripts automatically create a control window.
-
-### ManiSkill Import Error
-
-Make sure `install.py` ran successfully:
-```bash
-python install.py
-```
+Upstream source models (reference only, not needed at runtime):
+[liyiteng/alohamini](https://github.com/liyiteng/alohamini) (`alohamini2pro.urdf` — the arm model AlohaMini 2 was converted from) ·
+[roboninecom/SO-ARM100-101-Parallel-Gripper](https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper) (`so_101.urdf.xacro` — the parallel-gripper donor)
 
 ## References
 
-- [ManiSkill3 Documentation](https://maniskill.readthedocs.io/)
-- [UV Package Installer](https://github.com/astral-sh/uv)
-- [XLeRobot](https://github.com/Vector-Wangel/XLeRobot) - Virtual base implementation reference
-- [ReplicaCAD Dataset](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/scenes.html)
+- [ManiSkill3 documentation](https://maniskill.readthedocs.io/)
+- [XLeRobot](https://github.com/Vector-Wangel/XLeRobot) — virtual-base implementation reference
+- [ReplicaCAD dataset](https://maniskill.readthedocs.io/en/latest/user_guide/datasets/scenes.html)

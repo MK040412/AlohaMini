@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """GUI viewer for the two official AlohaMini robots.
 
-Usage (from maniskill/, with mani-skill installed):
-    python view_urdf.py            # list keys
-    python view_urdf.py mini2      # open that robot in the SAPIEN viewer
+Usage:
+    python view_urdf.py                 # list keys
+    python view_urdf.py mini2           # open that robot in the SAPIEN viewer
+    python view_urdf.py mini1 --headless  # load-check only (no window, exits 0)
 
 Keys:
     mini1    AlohaMini1  aloha_mini_1.urdf  SO100 arms + parallel gripper (repo assets, install.py)
@@ -24,7 +25,10 @@ uid = KEYS[sys.argv[1]]
 headless = "--headless" in sys.argv  # load-check only, no window
 
 import gymnasium as gym
-import agents.aloha_mini  # noqa: registers aloha_mini_1 / aloha_mini_2
+try:
+    import mani_skill.agents.robots.aloha_mini  # noqa: installed via install.py
+except ImportError:
+    import agents.aloha_mini  # noqa: fallback — running from the repo without install.py
 import mani_skill.envs  # noqa
 
 env = gym.make(
